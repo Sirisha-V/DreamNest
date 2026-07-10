@@ -16,6 +16,14 @@ export interface Goal {
   title: string;
   target_amount: number;
   saved_amount: number;
+  monthly_contribution: number;
+  months_saved: number;
+  monthly_income: number | null;
+  mandatory_expenses: number | null;
+  is_couple_goal: boolean;
+  partner_name: string | null;
+  plan_summary: string | null;
+  notes: string | null;
   deadline: string | null;
   priority: string | null;
   progress: number;
@@ -35,6 +43,34 @@ export interface DashboardResponse {
     title: string;
     message: string;
   };
+}
+
+export interface Transaction {
+  id: number;
+  user_id: number;
+  goal_id: number | null;
+  kind: 'income' | 'expense' | 'savings' | 'investment' | 'transfer';
+  category: string;
+  amount: number;
+  note: string | null;
+  occurred_on: string;
+  created_at: string | null;
+}
+
+export interface TransactionSummaryItem {
+  label: string;
+  value: number;
+}
+
+export interface TransactionSummary {
+  income: number;
+  expenses: number;
+  savings: number;
+  investments: number;
+  transfers: number;
+  net: number;
+  recent_transactions: Transaction[];
+  breakdown: TransactionSummaryItem[];
 }
 
 interface RequestOptions extends RequestInit {
@@ -57,7 +93,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     throw new Error('Not authenticated. Redirecting to login.');
   }
 
-  let response: Response;
+  let response: Response | undefined;
   const baseUrls = [API_BASE_URL];
   if (API_FALLBACK_BASE_URL) {
     baseUrls.push(API_FALLBACK_BASE_URL);
@@ -70,7 +106,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
         ...options,
         headers,
       });
-      break;
+      if (response) break;
     } catch (error) {
       lastError = error;
       console.warn(`Fetch failed for ${baseUrl}${path}:`, error);
@@ -127,10 +163,67 @@ export async function createGoal(payload: {
   title: string;
   target_amount: number;
   saved_amount?: number;
+  monthly_contribution?: number;
+  months_saved?: number;
+  monthly_income?: number | null;
+  mandatory_expenses?: number | null;
+  is_couple_goal?: boolean;
+  partner_name?: string | null;
+  plan_summary?: string | null;
+  notes?: string | null;
   deadline?: string | null;
   priority?: string | null;
 }) {
   return request<Goal>('/api/v1/goals/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateGoal(goalId: number, payload: Partial<{
+  title: string;
+  target_amount: number;
+  saved_amount: number;
+  monthly_contribution: number;
+  months_saved: number;
+  monthly_income: number | null;
+  mandatory_expenses: number | null;
+  is_couple_goal: boolean;
+  partner_name: string | null;
+  plan_summary: string | null;
+  notes: string | null;
+  deadline: string | null;
+  priority: string | null;
+}>) {
+  return request<Goal>(`/api/v1/goals/${goalId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteGoal(goalId: number) {
+  return request<void>(`/api/v1/goals/${goalId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function fetchTransactions() {
+  return request<Transaction[]>('/api/v1/transactions/');
+}
+
+export async function fetchTransactionSummary() {
+  return request<TransactionSummary>('/api/v1/transactions/summary');
+}
+
+export async function createTransaction(payload: {
+  kind: Transaction['kind'];
+  category: string;
+  amount: number;
+  goal_id?: number | null;
+  note?: string | null;
+  occurred_on?: string;
+}) {
+  return request<Transaction>('/api/v1/transactions/', {
     method: 'POST',
     body: JSON.stringify(payload),
   });

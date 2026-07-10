@@ -4,11 +4,13 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import DashboardPage from './pages/DashboardPage';
+import MonthlySavingsPage from './pages/MonthlySavingsPage';
 import DreamsPage from './pages/DreamsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import TransactionsPage from './pages/TransactionsPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
+import CoupleCornerPage from './pages/CoupleCornerPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 
 function App() {
@@ -20,9 +22,11 @@ function App() {
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/monthly-savings" element={<MonthlySavingsPage />} />
           <Route path="/dreams" element={<DreamsPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/transactions" element={<TransactionsPage />} />
+          <Route path="/couple-corner" element={<CoupleCornerPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>

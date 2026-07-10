@@ -1,11 +1,13 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Home, Sparkles, BarChart3, Wallet2, UserCircle2, Settings, LogOut, Plus } from 'lucide-react';
+import { Home, Sparkles, BarChart3, Wallet2, UserCircle2, Settings, LogOut, Plus, HeartHandshake, PlusCircle } from 'lucide-react';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: Home },
+  { to: '/monthly-savings', label: 'Savings Hub', icon: Wallet2 },
   { to: '/dreams', label: 'Dreams', icon: Sparkles },
   { to: '/analytics', label: 'Analytics', icon: BarChart3 },
   { to: '/transactions', label: 'Transactions', icon: Wallet2 },
+  { to: '/couple-corner', label: 'Couple Corner', icon: HeartHandshake },
   { to: '/profile', label: 'Profile', icon: UserCircle2 },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
@@ -16,6 +18,10 @@ const Layout = () => {
   const handleLogout = () => {
     localStorage.removeItem('dreamnest_token');
     navigate('/login');
+  };
+
+  const openDreamsPanel = (panel: string) => {
+    navigate(`/dreams?panel=${panel}`);
   };
 
   return (
@@ -40,11 +46,20 @@ const Layout = () => {
           <div className="promo-card">
             <p className="promo-title">Ready for your next dream?</p>
             <p className="promo-copy">Create a new milestone and let Nesty guide the way.</p>
-            <button className="button button-secondary button-icon">
+            <button type="button" className="button button-secondary button-icon" onClick={() => openDreamsPanel('create')}>
               <Plus /> New Dream
             </button>
           </div>
         </aside>
+
+        <div className="floating-actions">
+          <button type="button" className="fab-button" onClick={() => openDreamsPanel('create')}><PlusCircle size={20} /></button>
+          <div className="fab-menu">
+            <button type="button" className="fab-item" onClick={() => openDreamsPanel('create')}>Create Dream</button>
+            <button type="button" className="fab-item" onClick={() => openDreamsPanel('savings')}>Add Savings</button>
+            <button type="button" className="fab-item" onClick={() => openDreamsPanel('simulator')}>Run Simulator</button>
+          </div>
+        </div>
 
         <main className="main-content">
           <header className="header-card">
@@ -53,7 +68,7 @@ const Layout = () => {
               <h1 className="page-title">Plan boldly. Save beautifully.</h1>
             </div>
             <div className="header-actions">
-              <button className="button button-ghost">+ New dream</button>
+              <button type="button" className="button button-ghost" onClick={() => openDreamsPanel('create')}>+ New dream</button>
               <button className="icon-button" onClick={handleLogout}>
                 <LogOut />
               </button>

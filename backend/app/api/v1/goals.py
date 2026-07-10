@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
+import jwt
 
 from app.core.security import decode_access_token
 from app.db.session import get_db
@@ -17,8 +18,11 @@ def get_current_user_id(
 ) -> int:
     if credentials is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    payload = decode_access_token(credentials.credentials)
-    return int(payload["sub"])
+    try:
+        payload = decode_access_token(credentials.credentials)
+        return int(payload["sub"])
+    except (jwt.PyJWTError, KeyError, TypeError, ValueError):
+        raise HTTPException(status_code=401, detail="Not authenticated")
 
 
 @router.post("/", response_model=GoalResponse)

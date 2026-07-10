@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.db.database import Base
@@ -14,6 +14,14 @@ class Goal(Base):
     title = Column(String(255), nullable=False)
     target_amount = Column(Integer, nullable=False, default=0)
     saved_amount = Column(Integer, nullable=False, default=0)
+    monthly_contribution = Column(Integer, nullable=False, default=0)
+    months_saved = Column(Integer, nullable=False, default=0)
+    monthly_income = Column(Integer, nullable=True, default=0)
+    mandatory_expenses = Column(Integer, nullable=True, default=0)
+    is_couple_goal = Column(Boolean, nullable=False, default=False)
+    partner_name = Column(String(100), nullable=True)
+    plan_summary = Column(String(500), nullable=True)
+    notes = Column(String(500), nullable=True)
     priority = Column(String(50), nullable=True)
     deadline = Column(String(10), nullable=True)
 

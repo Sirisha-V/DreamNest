@@ -1,4 +1,4 @@
-import { TrendingUp, PieChart, Wallet2, Sparkles } from 'lucide-react';
+import { TrendingUp, PieChart, Wallet2, Sparkles, Target, HeartHandshake } from 'lucide-react';
 
 const cards = [
   { title: 'Savings Trend', value: '+12%', icon: TrendingUp },
@@ -42,6 +42,16 @@ const AnalyticsPage = () => {
             {[40, 68, 54, 82, 74, 90].map((height) => (
               <div key={height} className="flex-1 rounded-t-[16px] bg-gradient-to-t from-emerald-500 to-teal-400" style={{ height: `${height}%` }} />
             ))}
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+              <div className="flex items-center gap-2"><Target size={16} /> Goal pacing</div>
+              <p className="mt-2 text-sm text-slate-600">You are on track to reach your current target with your planned monthly contribution.</p>
+            </div>
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+              <div className="flex items-center gap-2"><HeartHandshake size={16} /> Couple planning</div>
+              <p className="mt-2 text-sm text-slate-600">Shared goals become easier when progress is reviewed as a team each month.</p>
+            </div>
           </div>
         </div>
         <div className="page-panel">

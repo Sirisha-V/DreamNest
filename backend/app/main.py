@@ -4,8 +4,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.auth import router as auth_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.goals import router as goal_router
+from app.api.v1.transactions import router as transaction_router
 from app.db.base import Base
-from app.db.database import engine
+from app.db.database import engine, initialize_database
 
 app = FastAPI(
     title="DreamNest API",
@@ -24,9 +25,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-Base.metadata.create_all(bind=engine)
+initialize_database()
 app.include_router(auth_router)
 app.include_router(goal_router)
+app.include_router(transaction_router)
 app.include_router(dashboard_router)
 
 

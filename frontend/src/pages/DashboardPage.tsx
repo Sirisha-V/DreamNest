@@ -9,7 +9,7 @@ const formatCurrency = (value: number) => `₹${(value / 1000).toFixed(value >= 
 
 const DashboardPage = () => {
   const navigate = useNavigate();
-  const { dashboard, goals, transactions, loading, error, saveToDream, removeDream, updateDream } = useDreams();
+  const { dashboard, goals, transactions, loading, error, removeDream, updateDream } = useDreams();
   const [toast, setToast] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [completedMissions, setCompletedMissions] = useState<string[]>([]);

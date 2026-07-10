@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import create_access_token, hash_password, verify_password
 from app.repositories.user_repository import UserRepository
-from app.schemas.user import UserCreate, UserLogin
+from app.schemas.user import PasswordReset, UserCreate, UserLogin
 
 
 class AuthService:
@@ -30,3 +30,12 @@ class AuthService:
 
         token = create_access_token(user.id)
         return {"access_token": token, "token_type": "bearer"}
+
+    def reset_password(self, reset_data: PasswordReset):
+        user = self.repository.get_by_email(str(reset_data.email))
+        if not user:
+            raise HTTPException(status_code=404, detail="Account not found")
+
+        password_hash = hash_password(reset_data.password)
+        self.repository.update_password(user, password_hash)
+        return {"message": "Password updated"}

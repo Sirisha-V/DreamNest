@@ -50,8 +50,13 @@ export const DreamProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    if (!localStorage.getItem('dreamnest_token')) {
+      setLoading(false);
+      return;
+    }
+
     void refresh();
-  }, []);
+  }, [refresh]);
 
   const addDream = async (payload: Parameters<typeof createGoal>[0]) => {
     const dream = await createGoal(payload);

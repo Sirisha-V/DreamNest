@@ -89,7 +89,6 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     headers.set('Authorization', `Bearer ${token}`);
   } else if (options.auth !== false) {
     localStorage.removeItem('dreamnest_token');
-    window.location.replace('/login');
     throw new Error('Not authenticated. Redirecting to login.');
   }
 
@@ -121,7 +120,6 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (!response.ok) {
     if (response.status === 401 || response.status === 403) {
       localStorage.removeItem('dreamnest_token');
-      window.location.replace('/login');
       throw new Error('Session expired. Please sign in again.');
     }
     const errorText = await response.text();
@@ -145,6 +143,14 @@ export async function loginUser(payload: { email: string; password: string }) {
 
 export async function registerUser(payload: { name: string; email: string; password: string }) {
   return request<AuthResponse>('/api/v1/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    auth: false,
+  });
+}
+
+export async function resetPassword(payload: { email: string; password: string }) {
+  return request<{ message: string }>('/api/v1/auth/reset-password', {
     method: 'POST',
     body: JSON.stringify(payload),
     auth: false,

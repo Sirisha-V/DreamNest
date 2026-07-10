@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowDownRight, ArrowUpRight, PiggyBank, PlusCircle, Wallet2, Target, Landmark, History, TrendingUp, Sparkles } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, PiggyBank, PlusCircle, Landmark, History, TrendingUp } from 'lucide-react';
 import Modal from '../components/Modal';
 import Toast from '../components/Toast';
 import { useDreams } from '../context/DreamContext';
@@ -24,8 +23,7 @@ const txLabel = (kind: Transaction['kind']) => {
 };
 
 const MonthlySavingsPage = () => {
-  const navigate = useNavigate();
-  const { dashboard, goals, transactions, transactionSummary, loading, error, addIncome, addExpense, transferToSavings } = useDreams();
+  const { goals, transactions, transactionSummary, loading, error, addIncome, addExpense, transferToSavings } = useDreams();
   const [toast, setToast] = useState('');
   const [incomeOpen, setIncomeOpen] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
@@ -37,7 +35,6 @@ const MonthlySavingsPage = () => {
   const [goalId, setGoalId] = useState<number | ''>('');
   const [saving, setSaving] = useState(false);
 
-  const activeGoals = useMemo(() => goals.filter((goal) => goal.saved_amount < goal.target_amount), [goals]);
   const recentTransactions = useMemo(() => transactionSummary?.recent_transactions ?? transactions.slice(0, 8), [transactionSummary, transactions]);
 
   const grouped = useMemo(() => {
@@ -104,7 +101,8 @@ const MonthlySavingsPage = () => {
   };
 
   const handleAddSavings = () => {
-    navigate('/dreams?panel=savings');
+    setGoalId('');
+    setTransferOpen(true);
   };
 
   if (loading) {

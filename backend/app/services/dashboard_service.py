@@ -1,6 +1,6 @@
 from app.models.goal import Goal
 from app.models.user import User
-from app.schemas.dashboard import DashboardResponse, NestyInsight
+from app.schemas.dashboard import DashboardResponse
 
 
 class DashboardService:
@@ -24,7 +24,6 @@ class DashboardService:
 
         dream_score = int(round((consistency_score * 0.3) + (progress_score * 0.3) + (emergency_score * 0.2) + (discipline_score * 0.2)))
 
-        nesty_message = self._build_nesty_message(overall_progress, total_saved, total_target)
         return DashboardResponse(
             user=self.user.name,
             dream_score=dream_score,
@@ -34,21 +33,4 @@ class DashboardService:
             active_dreams=active_dreams,
             completed_dreams=completed_dreams,
             monthly_saving=monthly_saving,
-            nesty=NestyInsight(**nesty_message),
         )
-
-    def _build_nesty_message(self, overall_progress: float, total_saved: int, total_target: int) -> dict[str, str]:
-        if overall_progress >= 50:
-            return {
-                "title": "You are building momentum!",
-                "message": f"You reached {overall_progress:.0f}% of your dreams. Keep going!",
-            }
-        if total_saved > 0:
-            return {
-                "title": "You're doing great!",
-                "message": f"You reached {overall_progress:.0f}% of your overall dreams. Keep going!",
-            }
-        return {
-            "title": "Start your first dream",
-            "message": "Create your first dream and let DreamNest guide your progress.",
-        }

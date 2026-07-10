@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDownRight, ArrowUpRight, PiggyBank, PlusCircle, Landmark, History, TrendingUp } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, PiggyBank, PlusCircle, Landmark, History, TrendingUp, Edit3, Trash2 } from 'lucide-react';
 import Modal from '../components/Modal';
 import Toast from '../components/Toast';
 import { useDreams } from '../context/DreamContext';
@@ -23,16 +23,24 @@ const txLabel = (kind: Transaction['kind']) => {
 };
 
 const MonthlySavingsPage = () => {
-  const { goals, transactions, transactionSummary, loading, error, addIncome, addExpense, transferToSavings } = useDreams();
+  const { goals, transactions, transactionSummary, loading, error, addIncome, addExpense, transferToSavings, editTransaction, removeTransaction } = useDreams();
   const [toast, setToast] = useState('');
   const [incomeOpen, setIncomeOpen] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Salary');
   const [note, setNote] = useState('');
   const [goalId, setGoalId] = useState<number | ''>('');
+  const [editTransactionId, setEditTransactionId] = useState<number | null>(null);
+  const [editKind, setEditKind] = useState<Transaction['kind']>('savings');
+  const [editCategory, setEditCategory] = useState('');
+  const [editAmount, setEditAmount] = useState('');
+  const [editNote, setEditNote] = useState('');
+  const [editGoalId, setEditGoalId] = useState<number | ''>('');
+  const [editOccurredOn, setEditOccurredOn] = useState('');
   const [saving, setSaving] = useState(false);
 
   const recentTransactions = useMemo(() => transactionSummary?.recent_transactions ?? transactions.slice(0, 8), [transactionSummary, transactions]);
@@ -52,13 +60,25 @@ const MonthlySavingsPage = () => {
   }, [transactions]);
 
   useEffect(() => {
-    if (!incomeOpen && !expenseOpen && !transferOpen) {
+    if (!incomeOpen && !expenseOpen && !transferOpen && !editOpen) {
       setAmount('');
       setCategory('Salary');
       setNote('');
       setGoalId('');
     }
-  }, [incomeOpen, expenseOpen, transferOpen]);
+  }, [incomeOpen, expenseOpen, transferOpen, editOpen]);
+
+  useEffect(() => {
+    if (!editOpen) {
+      setEditTransactionId(null);
+      setEditKind('savings');
+      setEditCategory('');
+      setEditAmount('');
+      setEditNote('');
+      setEditGoalId('');
+      setEditOccurredOn('');
+    }
+  }, [editOpen]);
 
   const summary = transactionSummary ?? {
     income: 0,
@@ -104,6 +124,74 @@ const MonthlySavingsPage = () => {
     setGoalId('');
     setTransferOpen(true);
   };
+
+  const openEdit = (transaction: Transaction) => {
+    setEditTransactionId(transaction.id);
+    setEditKind(transaction.kind);
+    setEditCategory(transaction.category);
+    setEditAmount(String(transaction.amount));
+    setEditNote(transaction.note ?? '');
+    setEditGoalId(transaction.goal_id ?? '');
+    setEditOccurredOn(transaction.occurred_on);
+    setEditOpen(true);
+  };
+
+  const handleUpdateTransaction = async () => {
+    if (editTransactionId === null) return;
+    const value = Number(editAmount);
+    if (!value || value <= 0) {
+      setToast('Enter a valid amount.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await editTransaction(editTransactionId, {
+        kind: editKind,
+        category: editCategory || txLabel(editKind),
+        amount: value,
+        goal_id: editKind === 'savings' ? (editGoalId === '' ? null : Number(editGoalId)) : null,
+        note: editNote || null,
+        occurred_on: editOccurredOn,
+      });
+      setToast('Transaction updated successfully');
+      setEditOpen(false);
+    } catch (err) {
+      setToast(err instanceof Error ? err.message : 'Unable to update transaction');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteTransaction = async (transaction: Transaction) => {
+    if (!window.confirm(`Delete ${transaction.category}? This cannot be undone.`)) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await removeTransaction(transaction.id);
+      setToast('Transaction deleted successfully');
+      if (editTransactionId === transaction.id) {
+        setEditOpen(false);
+      }
+    } catch (err) {
+      setToast(err instanceof Error ? err.message : 'Unable to delete transaction');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const transactionActions = (transaction: Transaction) => (
+    <div className="transaction-actions">
+      <button type="button" className="icon-action-button" onClick={() => openEdit(transaction)} aria-label={`Edit ${transaction.category}`}>
+        <Edit3 size={14} />
+      </button>
+      <button type="button" className="icon-action-button icon-action-button-danger" onClick={() => void handleDeleteTransaction(transaction)} aria-label={`Delete ${transaction.category}`}>
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
 
   if (loading) {
     return <div className="rounded-[32px] border border-white/70 bg-white/70 p-6 text-slate-600 shadow-[0_20px_60px_rgba(15,23,42,0.06)] backdrop-blur">Loading your savings hub…</div>;
@@ -184,7 +272,10 @@ const MonthlySavingsPage = () => {
                     <p className="transaction-meta">{transaction.occurred_on} • {transaction.note ?? 'Income entry'}</p>
                   </div>
                 </div>
-                <p className="transaction-amount text-emerald-600">+₹{transaction.amount.toLocaleString()}</p>
+                <div className="transaction-right">
+                  <p className="transaction-amount text-emerald-600">+₹{transaction.amount.toLocaleString()}</p>
+                  {transactionActions(transaction)}
+                </div>
               </div>
             ))}
           </div>
@@ -208,7 +299,10 @@ const MonthlySavingsPage = () => {
                     <p className="transaction-meta">{transaction.occurred_on} • {transaction.note ?? 'Expense entry'}</p>
                   </div>
                 </div>
-                <p className="transaction-amount text-slate-800">-₹{transaction.amount.toLocaleString()}</p>
+                <div className="transaction-right">
+                  <p className="transaction-amount text-slate-800">-₹{transaction.amount.toLocaleString()}</p>
+                  {transactionActions(transaction)}
+                </div>
               </div>
             ))}
           </div>
@@ -232,7 +326,10 @@ const MonthlySavingsPage = () => {
                     <p className="transaction-meta">{transaction.occurred_on} • {transaction.note ?? 'Savings transfer'}</p>
                   </div>
                 </div>
-                <p className="transaction-amount text-emerald-600">₹{transaction.amount.toLocaleString()}</p>
+                <div className="transaction-right">
+                  <p className="transaction-amount text-emerald-600">₹{transaction.amount.toLocaleString()}</p>
+                  {transactionActions(transaction)}
+                </div>
               </div>
             ))}
           </div>
@@ -255,7 +352,10 @@ const MonthlySavingsPage = () => {
                     <p className="transaction-meta">{transaction.occurred_on} • {transaction.note ?? 'Investment entry'}</p>
                   </div>
                 </div>
-                <p className="transaction-amount text-slate-800">₹{transaction.amount.toLocaleString()}</p>
+                <div className="transaction-right">
+                  <p className="transaction-amount text-slate-800">₹{transaction.amount.toLocaleString()}</p>
+                  {transactionActions(transaction)}
+                </div>
               </div>
             ))}
           </div>
@@ -284,7 +384,10 @@ const MonthlySavingsPage = () => {
                   <p className="transaction-meta">{txLabel(transaction.kind)} • {transaction.occurred_on}</p>
                 </div>
               </div>
-              <p className={`transaction-amount ${transaction.kind === 'income' ? 'text-emerald-600' : 'text-slate-800'}`}>{transaction.kind === 'income' ? '+' : '-'}₹{transaction.amount.toLocaleString()}</p>
+              <div className="transaction-right">
+                <p className={`transaction-amount ${transaction.kind === 'income' ? 'text-emerald-600' : 'text-slate-800'}`}>{transaction.kind === 'income' ? '+' : '-'}₹{transaction.amount.toLocaleString()}</p>
+                {transactionActions(transaction)}
+              </div>
             </div>
           ))}
         </div>
@@ -325,9 +428,53 @@ const MonthlySavingsPage = () => {
                 <p className="transaction-title">{transaction.category}</p>
                 <p className="transaction-meta">{txLabel(transaction.kind)} • {transaction.occurred_on}</p>
               </div>
-              <p className="transaction-amount">₹{transaction.amount.toLocaleString()}</p>
+              <div className="transaction-right">
+                <p className="transaction-amount">₹{transaction.amount.toLocaleString()}</p>
+                {transactionActions(transaction)}
+              </div>
             </div>
           ))}
+        </div>
+      </Modal>
+
+      <Modal open={editOpen} title="Edit Transaction" onClose={() => setEditOpen(false)}>
+        <div className="space-y-4">
+          <label className="form-field">
+            <span>Type</span>
+            <select className="input-field" value={editKind} onChange={(event) => setEditKind(event.target.value as Transaction['kind'])}>
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+              <option value="savings">Savings</option>
+              <option value="investment">Investment</option>
+              <option value="transfer">Transfer</option>
+            </select>
+          </label>
+          <label className="form-field">
+            <span>Amount</span>
+            <input className="input-field" type="number" min="1" value={editAmount} onChange={(event) => setEditAmount(event.target.value)} />
+          </label>
+          <label className="form-field">
+            <span>Category</span>
+            <input className="input-field" value={editCategory} onChange={(event) => setEditCategory(event.target.value)} />
+          </label>
+          {editKind === 'savings' ? (
+            <label className="form-field">
+              <span>Goal</span>
+              <select className="input-field" value={editGoalId} onChange={(event) => setEditGoalId(event.target.value ? Number(event.target.value) : '')}>
+                <option value="">General savings</option>
+                {goals.map((goal) => <option key={goal.id} value={goal.id}>{goal.title}</option>)}
+              </select>
+            </label>
+          ) : null}
+          <label className="form-field">
+            <span>Date</span>
+            <input className="input-field" type="date" value={editOccurredOn} onChange={(event) => setEditOccurredOn(event.target.value)} />
+          </label>
+          <label className="form-field">
+            <span>Note</span>
+            <textarea className="input-field" rows={3} value={editNote} onChange={(event) => setEditNote(event.target.value)} />
+          </label>
+          <button type="button" className="button button-primary w-full" disabled={saving} onClick={() => void handleUpdateTransaction()}>{saving ? 'Saving…' : 'Save Changes'}</button>
         </div>
       </Modal>
 

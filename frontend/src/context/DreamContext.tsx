@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { createGoal, createTransaction, fetchDashboard, fetchGoals, fetchTransactionSummary, fetchTransactions, type DashboardResponse, type Goal, type Transaction, type TransactionSummary, updateGoal, deleteGoal } from '../lib/api';
+import { createGoal, createTransaction, deleteGoal, deleteTransaction, fetchDashboard, fetchGoals, fetchTransactionSummary, fetchTransactions, type DashboardResponse, type Goal, type Transaction, type TransactionSummary, updateGoal, updateTransaction } from '../lib/api';
 
 interface DreamContextValue {
   goals: Goal[];
@@ -16,6 +16,15 @@ interface DreamContextValue {
   addIncome: (amount: number, category: string, note?: string) => Promise<Transaction>;
   addExpense: (amount: number, category: string, note?: string) => Promise<Transaction>;
   transferToSavings: (amount: number, goalId?: number | null, note?: string) => Promise<Transaction>;
+  editTransaction: (transactionId: number, data: Partial<{
+    kind: Transaction['kind'];
+    category: string;
+    amount: number;
+    goal_id: number | null;
+    note: string | null;
+    occurred_on: string;
+  }>) => Promise<Transaction>;
+  removeTransaction: (transactionId: number) => Promise<void>;
 }
 
 const DreamContext = createContext<DreamContextValue | null>(null);
@@ -108,8 +117,26 @@ export const DreamProvider = ({ children }: { children: React.ReactNode }) => {
     return entry;
   };
 
+  const editTransaction = async (transactionId: number, data: Partial<{
+    kind: Transaction['kind'];
+    category: string;
+    amount: number;
+    goal_id: number | null;
+    note: string | null;
+    occurred_on: string;
+  }>) => {
+    const updated = await updateTransaction(transactionId, data);
+    await refresh();
+    return updated;
+  };
+
+  const removeTransaction = async (transactionId: number) => {
+    await deleteTransaction(transactionId);
+    await refresh();
+  };
+
   const value = useMemo(
-    () => ({ goals, transactions, transactionSummary, dashboard, loading, error, refresh, addDream, saveToDream, removeDream, updateDream, addIncome, addExpense, transferToSavings }),
+    () => ({ goals, transactions, transactionSummary, dashboard, loading, error, refresh, addDream, saveToDream, removeDream, updateDream, addIncome, addExpense, transferToSavings, editTransaction, removeTransaction }),
     [goals, transactions, transactionSummary, dashboard, loading, error, refresh],
   );
 

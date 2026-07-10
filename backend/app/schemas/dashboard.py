@@ -1,11 +1,6 @@
 from pydantic import BaseModel
 
 
-class NestyInsight(BaseModel):
-    title: str
-    message: str
-
-
 class DashboardResponse(BaseModel):
     user: str
     dream_score: int
@@ -15,4 +10,3 @@ class DashboardResponse(BaseModel):
     active_dreams: int
     completed_dreams: int
     monthly_saving: int
-    nesty: NestyInsight

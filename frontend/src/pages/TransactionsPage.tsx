@@ -35,10 +35,11 @@ const TransactionsPage = () => {
             <h2>A clean record of every movement.</h2>
             <p>Search, filter, and review the live ledger behind your savings hub.</p>
           </div>
-          <label className="search-pill">
+          <label className="search-pill search-pill-transactions">
             <Search size={16} />
             <input
-              className="bg-transparent outline-none"
+              className="search-input"
+              type="search"
               placeholder="Search categories, notes, or dates"
               value={query}
               onChange={(event) => setQuery(event.target.value)}

@@ -45,7 +45,7 @@ const Layout = () => {
           </nav>
           <div className="promo-card">
             <p className="promo-title">Ready for your next dream?</p>
-            <p className="promo-copy">Create a new milestone and let Nesty guide the way.</p>
+            <p className="promo-copy">Create a new milestone and keep your plan moving forward.</p>
             <button type="button" className="button button-secondary button-icon" onClick={() => openDreamsPanel('create')}>
               <Plus /> New Dream
             </button>

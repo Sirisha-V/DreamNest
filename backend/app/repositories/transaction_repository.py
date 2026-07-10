@@ -8,6 +8,12 @@ class TransactionRepository:
     def __init__(self, db: Session):
         self.db = db
 
+    def get_by_id(self, transaction_id: int, user_id: int | None = None) -> Transaction | None:
+        query = self.db.query(Transaction).filter(Transaction.id == transaction_id)
+        if user_id is not None:
+            query = query.filter(Transaction.user_id == user_id)
+        return query.first()
+
     def create(
         self,
         *,
@@ -32,6 +38,31 @@ class TransactionRepository:
         self.db.commit()
         self.db.refresh(transaction)
         return transaction
+
+    def update(
+        self,
+        transaction: Transaction,
+        *,
+        kind: str,
+        category: str,
+        amount: int,
+        goal_id: int | None,
+        note: str | None,
+        occurred_on: str,
+    ) -> Transaction:
+        transaction.kind = kind
+        transaction.category = category
+        transaction.amount = amount
+        transaction.goal_id = goal_id
+        transaction.note = note
+        transaction.occurred_on = occurred_on
+        self.db.commit()
+        self.db.refresh(transaction)
+        return transaction
+
+    def delete(self, transaction: Transaction) -> None:
+        self.db.delete(transaction)
+        self.db.commit()
 
     def list_all(self, user_id: int | None = None) -> list[Transaction]:
         query = self.db.query(Transaction)

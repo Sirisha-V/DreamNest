@@ -87,7 +87,7 @@ const DashboardPage = () => {
         <div className="hero-copy">
           <p className="eyebrow">Good morning, {dashboard?.user ?? 'Dreamer'}</p>
           <h2 className="hero-title">Your dreams are already moving forward.</h2>
-          <p className="hero-text">Nesty is watching your progress and preparing the next smart move for your financial future.</p>
+          <p className="hero-text">Your dashboard is tracking progress and preparing the next smart move for your financial future.</p>
         </div>
         <div className="score-card">
           <p className="score-label">Dream Score</p>
@@ -186,21 +186,21 @@ const DashboardPage = () => {
           </div>
         </div>
 
-        <aside className="nesty-card interactive-card">
-          <div className="nesty-head">
-            <div>
-              <p className="eyebrow text-white/80">Nesty AI</p>
-              <h3>{dashboard?.nesty?.title ?? 'You’re doing great!'}</h3>
+        <aside className="page-panel">
+          <div className="section-header">
+            <h3>Quick Insights</h3>
+            <button type="button" className="link-button" onClick={() => handleAction('Insights', '/analytics')}>Open analytics</button>
+          </div>
+          <div className="space-y-3">
+            <div className="setting-card">
+              <p className="setting-title">Daily focus</p>
+              <p className="setting-detail">Keep one savings action moving today and review your closest goal.</p>
             </div>
-            <div className="nesty-emoji"><Sparkles /></div>
+            <div className="setting-card">
+              <p className="setting-title">Couple goals</p>
+              <p className="setting-detail">Shared dreams still show up in Couple Corner, just without the AI narration.</p>
+            </div>
           </div>
-          <p className="nesty-text">{dashboard?.nesty?.message ?? 'Your dreams are moving forward.'}</p>
-          <div className="space-y-2 rounded-2xl bg-white/10 p-3 text-sm text-white/90">
-            <p>• Personalized savings path based on income and essential expenses</p>
-            <p>• Shared savings guidance for couple goals</p>
-            <p>• Milestones and savings challenges to stay motivated</p>
-          </div>
-          <button type="button" className="button button-secondary" onClick={() => handleAction('Insights', '/analytics')}>Explore insights</button>
         </aside>
       </section>
 

@@ -39,10 +39,6 @@ export interface DashboardResponse {
   active_dreams: number;
   completed_dreams: number;
   monthly_saving: number;
-  nesty: {
-    title: string;
-    message: string;
-  };
 }
 
 export interface Transaction {
@@ -232,5 +228,25 @@ export async function createTransaction(payload: {
   return request<Transaction>('/api/v1/transactions/', {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+}
+
+export async function updateTransaction(transactionId: number, payload: Partial<{
+  kind: Transaction['kind'];
+  category: string;
+  amount: number;
+  goal_id: number | null;
+  note: string | null;
+  occurred_on: string;
+}>) {
+  return request<Transaction>(`/api/v1/transactions/${transactionId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteTransaction(transactionId: number) {
+  return request<void>(`/api/v1/transactions/${transactionId}`, {
+    method: 'DELETE',
   });
 }

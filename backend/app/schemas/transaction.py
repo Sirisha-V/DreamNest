@@ -13,6 +13,15 @@ class TransactionCreate(BaseModel):
     occurred_on: Optional[date] = None
 
 
+class TransactionUpdate(BaseModel):
+    kind: Optional[str] = None
+    category: Optional[str] = None
+    amount: Optional[int] = None
+    goal_id: Optional[int] = None
+    note: Optional[str] = None
+    occurred_on: Optional[date] = None
+
+
 class TransactionResponse(BaseModel):
     id: int
     user_id: int

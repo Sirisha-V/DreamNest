@@ -19,7 +19,7 @@ const AnalyticsPage = () => {
   };
 
   const cards = useMemo(() => [
-    { title: 'Dream Score', value: `${dashboard?.dream_score ?? 84}`, detail: 'Momentum across your whole nest', icon: Sparkles },
+    { title: 'Dream Score', value: `${dashboard?.dream_score ?? 84}`, detail: 'Momentum across your goals', icon: Sparkles },
     { title: 'Monthly Savings', value: formatCurrency(dashboard?.monthly_saving ?? summary.savings), detail: 'What is flowing toward goals', icon: Wallet2 },
     { title: 'Goal Pace', value: dashboard?.overall_progress ? `${dashboard.overall_progress.toFixed(0)}%` : 'On track', detail: 'Current completion speed', icon: TrendingUp },
     { title: 'Couple Goals', value: `${goals.filter((goal) => goal.is_couple_goal).length}`, detail: 'Shared dreams in motion', icon: HeartHandshake },
@@ -30,7 +30,7 @@ const AnalyticsPage = () => {
     const topGoal = goals[0];
     return [
       {
-        label: 'Nesty sees',
+        label: 'Overall view',
         title: total > 0 ? 'Your money is active, not idle.' : 'Your ledger is ready for the first move.',
         detail: total > 0
           ? `Income, savings, and goal transfers are now being tracked together across ${summary.recent_transactions.length} recent movements.`
@@ -47,7 +47,7 @@ const AnalyticsPage = () => {
         label: 'Guardrail',
         title: summary.expenses > summary.income ? 'Spending is outpacing income.' : 'Your flow is healthy.',
         detail: summary.expenses > summary.income
-          ? 'Nesty would suggest slowing discretionary spend before increasing goal contributions.'
+            ? 'Slow discretionary spend before increasing goal contributions.'
           : 'You have room to keep transferring toward savings if the next paycheck lands as planned.',
       },
     ];
@@ -107,7 +107,7 @@ const AnalyticsPage = () => {
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
               <div className="flex items-center gap-2"><Target size={16} /> Goal pacing</div>
-              <p className="mt-2 text-sm text-slate-600">{dashboard?.overall_progress ? `Your nest is ${dashboard.overall_progress.toFixed(0)}% to the finish line.` : 'Add a goal to see exact pacing.'}</p>
+              <p className="mt-2 text-sm text-slate-600">{dashboard?.overall_progress ? `Your plan is ${dashboard.overall_progress.toFixed(0)}% to the finish line.` : 'Add a goal to see exact pacing.'}</p>
             </div>
             <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
               <div className="flex items-center gap-2"><HeartHandshake size={16} /> Couple planning</div>

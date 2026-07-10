@@ -11,6 +11,8 @@ import TransactionsPage from './pages/TransactionsPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import CoupleCornerPage from './pages/CoupleCornerPage';
+import TimelinePage from './pages/TimelinePage';
+import SimulatorPage from './pages/SimulatorPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 
 function App() {
@@ -24,6 +26,8 @@ function App() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/monthly-savings" element={<MonthlySavingsPage />} />
           <Route path="/dreams" element={<DreamsPage />} />
+          <Route path="/timeline/:goalId" element={<TimelinePage />} />
+          <Route path="/simulator/:goalId" element={<SimulatorPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/transactions" element={<TransactionsPage />} />
           <Route path="/couple-corner" element={<CoupleCornerPage />} />

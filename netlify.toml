@@ -1,6 +1,10 @@
 [build]
-  command = "npm --prefix frontend run build"
+  command = "cd frontend && npm install && npm run build"
   publish = "frontend/dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  PYTHON_VERSION = "3.11"
 
 [functions]
   directory = "netlify/functions"

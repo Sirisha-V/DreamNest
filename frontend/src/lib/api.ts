@@ -1,6 +1,6 @@
 const RUNTIME_HOST = typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1';
 const IS_LOCAL_RUNTIME = RUNTIME_HOST === 'localhost' || RUNTIME_HOST === '127.0.0.1';
-const API_BASE_URL = import.meta.env.VITE_API_URL || (IS_LOCAL_RUNTIME ? `http://${RUNTIME_HOST}:8000` : '/.netlify/functions/api');
+const API_BASE_URL = import.meta.env.VITE_API_URL || (IS_LOCAL_RUNTIME ? `http://${RUNTIME_HOST}:8000` : '/api');
 const API_FALLBACK_BASE_URL = import.meta.env.VITE_API_URL
   ? undefined
   : RUNTIME_HOST === 'localhost'

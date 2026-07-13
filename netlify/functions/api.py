@@ -13,13 +13,15 @@ os.environ.setdefault("DATABASE_PATH", "/tmp/app.db")
 
 from app.main import app
 
-FUNCTION_PREFIX = "/.netlify/functions/api"
+FUNCTION_PREFIX = "/.netlify/functions"
 asgi_handler = Mangum(app, lifespan="off")
 
 
 def _strip_function_prefix(path: str) -> str:
     if path.startswith(FUNCTION_PREFIX):
         trimmed = path[len(FUNCTION_PREFIX):]
+        if not trimmed.startswith("/"):
+            trimmed = f"/{trimmed}"
         return trimmed or "/"
     return path or "/"
 

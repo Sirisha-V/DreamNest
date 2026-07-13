@@ -1,6 +1,64 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { createGoal, createTransaction, deleteGoal, deleteTransaction, fetchDashboard, fetchGoals, fetchTransactionSummary, fetchTransactions, type DashboardResponse, type Goal, type Transaction, type TransactionSummary, updateGoal, updateTransaction } from '../lib/api';
 
+const CACHE_PREFIX = 'dreamnest-cache';
+
+interface LocalDreamCache {
+  goals: Goal[];
+  transactions: Transaction[];
+  transactionSummary: TransactionSummary | null;
+  dashboard: DashboardResponse | null;
+}
+
+const base64UrlDecode = (value: string) => {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padding = '='.repeat((4 - (normalized.length % 4 || 4)) % 4);
+  return atob(`${normalized}${padding}`);
+};
+
+const getActiveUserEmail = () => {
+  const token = localStorage.getItem('dreamnest_token');
+  if (!token) return null;
+  try {
+    const decoded = base64UrlDecode(token);
+    if (!decoded.startsWith('dreamnest:')) return null;
+    return decoded.replace('dreamnest:', '').trim().toLowerCase() || null;
+  } catch {
+    return null;
+  }
+};
+
+const getCacheKey = () => {
+  const email = getActiveUserEmail();
+  if (!email) return null;
+  return `${CACHE_PREFIX}:${email}`;
+};
+
+const readLocalCache = (): LocalDreamCache | null => {
+  const key = getCacheKey();
+  if (!key) return null;
+
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as LocalDreamCache;
+    return {
+      goals: Array.isArray(parsed.goals) ? parsed.goals : [],
+      transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
+      transactionSummary: parsed.transactionSummary ?? null,
+      dashboard: parsed.dashboard ?? null,
+    };
+  } catch {
+    return null;
+  }
+};
+
+const writeLocalCache = (cache: LocalDreamCache) => {
+  const key = getCacheKey();
+  if (!key) return;
+  localStorage.setItem(key, JSON.stringify(cache));
+};
+
 interface DreamContextValue {
   goals: Goal[];
   transactions: Transaction[];
@@ -37,6 +95,15 @@ export const DreamProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const persistCacheSnapshot = useCallback((snapshot: Partial<LocalDreamCache>) => {
+    writeLocalCache({
+      goals: snapshot.goals ?? goals,
+      transactions: snapshot.transactions ?? transactions,
+      transactionSummary: snapshot.transactionSummary ?? transactionSummary,
+      dashboard: snapshot.dashboard ?? dashboard,
+    });
+  }, [goals, transactions, transactionSummary, dashboard]);
+
   const refresh = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -47,12 +114,41 @@ export const DreamProvider = ({ children }: { children: React.ReactNode }) => {
         fetchTransactions(),
         fetchTransactionSummary(),
       ]);
+
+      const localCache = readLocalCache();
+      const backendLooksEmpty = goalsData.length === 0 && transactionsData.length === 0;
+      const hasLocalData = Boolean(localCache && (localCache.goals.length > 0 || localCache.transactions.length > 0));
+
+      if (backendLooksEmpty && hasLocalData && localCache) {
+        setDashboard(localCache.dashboard);
+        setGoals(localCache.goals);
+        setTransactions(localCache.transactions);
+        setTransactionSummary(localCache.transactionSummary);
+        return;
+      }
+
       setDashboard(dashboardData);
       setGoals(goalsData);
       setTransactions(transactionsData);
       setTransactionSummary(transactionSummaryData);
+
+      writeLocalCache({
+        dashboard: dashboardData,
+        goals: goalsData,
+        transactions: transactionsData,
+        transactionSummary: transactionSummaryData,
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to refresh dreams');
+      const localCache = readLocalCache();
+      if (localCache) {
+        setDashboard(localCache.dashboard);
+        setGoals(localCache.goals);
+        setTransactions(localCache.transactions);
+        setTransactionSummary(localCache.transactionSummary);
+        setError('Using your saved local data while connection recovers.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Unable to refresh dreams');
+      }
     } finally {
       setLoading(false);
     }
@@ -67,9 +163,24 @@ export const DreamProvider = ({ children }: { children: React.ReactNode }) => {
     void refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    if (!localStorage.getItem('dreamnest_token')) {
+      return;
+    }
+
+    writeLocalCache({
+      dashboard,
+      goals,
+      transactions,
+      transactionSummary,
+    });
+  }, [dashboard, goals, transactions, transactionSummary]);
+
   const addDream = async (payload: Parameters<typeof createGoal>[0]) => {
     const dream = await createGoal(payload);
-    setGoals((current) => [dream, ...current]);
+    const nextGoals = [dream, ...goals];
+    setGoals(nextGoals);
+    persistCacheSnapshot({ goals: nextGoals });
     await refresh();
     return dream;
   };
@@ -81,38 +192,53 @@ export const DreamProvider = ({ children }: { children: React.ReactNode }) => {
       saved_amount: dream.saved_amount + amount,
       notes: notes ?? dream.notes,
     });
-    setGoals((current) => current.map((item) => (item.id === goalId ? updated : item)));
+    const nextGoals = goals.map((item) => (item.id === goalId ? updated : item));
+    setGoals(nextGoals);
+    persistCacheSnapshot({ goals: nextGoals });
     await refresh();
     return updated;
   };
 
   const removeDream = async (goalId: number) => {
     await deleteGoal(goalId);
-    setGoals((current) => current.filter((item) => item.id !== goalId));
+    const nextGoals = goals.filter((item) => item.id !== goalId);
+    setGoals(nextGoals);
+    persistCacheSnapshot({ goals: nextGoals });
     await refresh();
   };
 
   const updateDream = async (goalId: number, data: Partial<Omit<Goal, 'id'>>) => {
     const updated = await updateGoal(goalId, data);
-    setGoals((current) => current.map((item) => (item.id === goalId ? updated : item)));
+    const nextGoals = goals.map((item) => (item.id === goalId ? updated : item));
+    setGoals(nextGoals);
+    persistCacheSnapshot({ goals: nextGoals });
     await refresh();
     return updated;
   };
 
   const addIncome = async (amount: number, category: string, note?: string) => {
     const entry = await createTransaction({ kind: 'income', category, amount, note: note ?? null });
+    const nextTransactions = [entry, ...transactions];
+    setTransactions(nextTransactions);
+    persistCacheSnapshot({ transactions: nextTransactions });
     await refresh();
     return entry;
   };
 
   const addExpense = async (amount: number, category: string, note?: string) => {
     const entry = await createTransaction({ kind: 'expense', category, amount, note: note ?? null });
+    const nextTransactions = [entry, ...transactions];
+    setTransactions(nextTransactions);
+    persistCacheSnapshot({ transactions: nextTransactions });
     await refresh();
     return entry;
   };
 
   const transferToSavings = async (amount: number, goalId?: number | null, note?: string) => {
     const entry = await createTransaction({ kind: 'savings', category: 'Savings transfer', amount, goal_id: goalId ?? null, note: note ?? null });
+    const nextTransactions = [entry, ...transactions];
+    setTransactions(nextTransactions);
+    persistCacheSnapshot({ transactions: nextTransactions });
     await refresh();
     return entry;
   };
@@ -126,12 +252,18 @@ export const DreamProvider = ({ children }: { children: React.ReactNode }) => {
     occurred_on: string;
   }>) => {
     const updated = await updateTransaction(transactionId, data);
+    const nextTransactions = transactions.map((item) => (item.id === transactionId ? updated : item));
+    setTransactions(nextTransactions);
+    persistCacheSnapshot({ transactions: nextTransactions });
     await refresh();
     return updated;
   };
 
   const removeTransaction = async (transactionId: number) => {
     await deleteTransaction(transactionId);
+    const nextTransactions = transactions.filter((item) => item.id !== transactionId);
+    setTransactions(nextTransactions);
+    persistCacheSnapshot({ transactions: nextTransactions });
     await refresh();
   };
 

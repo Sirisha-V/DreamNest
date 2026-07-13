@@ -3,22 +3,44 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Sparkles, Wallet, TrendingUp, CalendarDays, Target, HeartHandshake, Edit3, Trash2, Activity, BarChart3 } from 'lucide-react';
 import { useDreams } from '../context/DreamContext';
+import { type Goal } from '../lib/api';
+import AddSavingsModal from '../components/AddSavingsModal';
 import Toast from '../components/Toast';
 
 const formatCurrency = (value: number) => `₹${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}K`;
 
 const DashboardPage = () => {
   const navigate = useNavigate();
-  const { dashboard, goals, transactions, loading, error, removeDream, updateDream } = useDreams();
+  const { dashboard, goals, transactions, loading, error, removeDream, updateDream, saveToDream } = useDreams();
   const [toast, setToast] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [completedMissions, setCompletedMissions] = useState<string[]>([]);
+  const [savingsOpen, setSavingsOpen] = useState(false);
+  const [activeDream, setActiveDream] = useState<Goal | null>(null);
 
   const handleAction = (label: string, route: string) => {
     setSubmitting(true);
     navigate(route);
     setToast(`${label} opened`);
     setSubmitting(false);
+  };
+
+  const openAddSavings = (dream?: Goal) => {
+    const selected = dream ?? goals[0] ?? null;
+    if (!selected) {
+      setToast('Create a dream first to add savings.');
+      return;
+    }
+
+    setActiveDream(selected);
+    setSavingsOpen(true);
+  };
+
+  const handleAddSavings = async (amount: number, notes: string) => {
+    if (!activeDream) return;
+    await saveToDream(activeDream.id, amount, notes);
+    setToast(`Added ₹${amount} to ${activeDream.title}`);
+    setSavingsOpen(false);
   };
 
   const stats = useMemo(() => {
@@ -166,7 +188,7 @@ const DashboardPage = () => {
                 </div>
 
                 <div className="panel-actions flex-wrap gap-3">
-                  <button type="button" className="button button-ghost button-icon" onClick={() => handleAction('Savings', '/monthly-savings')}><Activity size={14} /> Add Savings</button>
+                  <button type="button" className="button button-ghost button-icon" onClick={() => openAddSavings(dream)}><Activity size={14} /> Add Savings</button>
                   <button type="button" className="button button-ghost button-icon" onClick={() => handleAction('Timeline', `/timeline/${dream.id}`)}><BarChart3 size={14} /> View Timeline</button>
                   <button type="button" className="button button-ghost button-icon" onClick={() => handleAction('Simulator', `/simulator/${dream.id}`)}><Sparkles size={14} /> Simulate</button>
                   <button type="button" className="button button-ghost button-icon" onClick={async () => {
@@ -256,6 +278,7 @@ const DashboardPage = () => {
           </div>
         </div>
       </section>
+      <AddSavingsModal open={savingsOpen} onClose={() => setSavingsOpen(false)} onSave={handleAddSavings} />
       <Toast message={toast} open={Boolean(toast)} onClose={() => setToast('')} />
     </div>
   );

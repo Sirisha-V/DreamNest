@@ -1,10 +1,16 @@
+import os
 from pathlib import Path
 
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-DATABASE_PATH = Path(__file__).resolve().parents[2] / "app.db"
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{DATABASE_PATH.as_posix()}"
+database_url = os.getenv("DATABASE_URL")
+if database_url:
+    SQLALCHEMY_DATABASE_URL = database_url
+else:
+    database_path_value = os.getenv("DATABASE_PATH")
+    DATABASE_PATH = Path(database_path_value) if database_path_value else Path(__file__).resolve().parents[2] / "app.db"
+    SQLALCHEMY_DATABASE_URL = f"sqlite:///{DATABASE_PATH.as_posix()}"
 
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,

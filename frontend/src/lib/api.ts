@@ -3,9 +3,9 @@ const IS_LOCAL_RUNTIME = RUNTIME_HOST === 'localhost' || RUNTIME_HOST === '127.0
 const API_BASE_URL = import.meta.env.VITE_API_URL || (IS_LOCAL_RUNTIME ? `http://${RUNTIME_HOST}:8000` : '/api');
 const API_FALLBACK_BASE_URL = import.meta.env.VITE_API_URL
   ? undefined
-  : RUNTIME_HOST === 'localhost'
+  : IS_LOCAL_RUNTIME
   ? 'http://127.0.0.1:8000'
-  : 'http://localhost:8000';
+  : undefined;
 
 export interface AuthResponse {
   access_token: string;

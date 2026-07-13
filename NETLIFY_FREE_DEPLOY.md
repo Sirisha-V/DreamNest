@@ -11,8 +11,8 @@ This repo can run fully on a free Netlify site.
 
 1. Sign in to Netlify.
 2. Import this GitHub repo.
-3. Leave the base directory blank.
-4. Netlify will use the root `netlify.toml` file automatically.
+3. Set base directory to `frontend`.
+4. Netlify will use `frontend/netlify.toml`.
 5. Add environment variables:
    - `SECRET_KEY` = any long random string
    - `CORS_ORIGINS` = your final Netlify site URL, e.g. `https://your-site.netlify.app`

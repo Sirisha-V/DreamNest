@@ -12,6 +12,14 @@ const navItems = [
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 
+const mobileNavItems = [
+  { to: '/', label: 'Home', icon: Home },
+  { to: '/dreams', label: 'Dreams', icon: Sparkles },
+  { to: '/transactions', label: 'Money', icon: Wallet2 },
+  { to: '/analytics', label: 'Stats', icon: BarChart3 },
+  { to: '/settings', label: 'Settings', icon: Settings },
+];
+
 const Layout = () => {
   const navigate = useNavigate();
 
@@ -77,6 +85,15 @@ const Layout = () => {
           <Outlet />
         </main>
       </div>
+
+      <nav className="mobile-nav" aria-label="Mobile navigation">
+        {mobileNavItems.map(({ to, label, icon: Icon }) => (
+          <NavLink key={to} to={to} className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}>
+            <Icon size={18} />
+            <span>{label}</span>
+          </NavLink>
+        ))}
+      </nav>
     </div>
   );
 };

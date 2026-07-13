@@ -24,7 +24,7 @@ const TimelinePage = () => {
 
   if (!goal) {
     return (
-      <div className="page-grid">
+      <div className="page-grid app-standard-page">
         <section className="page-panel page-hero">
           <div className="theme-pill">Dream Timeline</div>
           <h2>No dream selected</h2>
@@ -46,7 +46,7 @@ const TimelinePage = () => {
   ];
 
   return (
-    <div className="page-grid">
+    <div className="page-grid app-standard-page">
       <section className="page-panel page-hero">
         <div className="theme-pill">Dream Timeline</div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

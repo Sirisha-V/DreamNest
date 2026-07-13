@@ -2,23 +2,53 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles, ShieldCheck } from 'lucide-react';
 import { registerUser } from '../lib/api';
+import { markOnboardingPending } from '../lib/onboarding';
+import { useDreams } from '../context/DreamContext';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { initializeUserData } = useDreams();
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
+
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (trimmedName.length < 2) {
+      setError('Please enter your full name.');
+      return;
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(trimmedEmail)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const response = await registerUser({ name, email, password });
+      const response = await registerUser({ name: trimmedName, email: trimmedEmail, password });
       localStorage.setItem('dreamnest_token', response.access_token);
+      markOnboardingPending(trimmedName);
+      initializeUserData(trimmedName);
       navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to create account');
@@ -57,6 +87,10 @@ const RegisterPage = () => {
             <label className="form-field">
               <span>Password</span>
               <input type="password" placeholder="Create a password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+            </label>
+            <label className="form-field">
+              <span>Confirm Password</span>
+              <input type="password" placeholder="Confirm password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required />
             </label>
             {error ? <p className="form-error">{error}</p> : null}
             <button className="button button-primary auth-submit" disabled={isSubmitting} type="submit">{isSubmitting ? 'Creating account...' : 'Create account'}</button>

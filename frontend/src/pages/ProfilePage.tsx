@@ -84,7 +84,7 @@ const ProfilePage = () => {
   };
 
   return (
-    <div className="page-grid">
+    <div className="page-grid app-standard-page">
       <section className="page-panel page-hero">
         <div className="theme-pill">Profile</div>
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -146,7 +146,7 @@ const ProfilePage = () => {
         </div>
       </section>
 
-      <section className="page-panel" style={{ background: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)', color: 'white' }}>
+      <section className="page-panel profile-coach-card">
         <div className="panel-actions">
           <Sparkles size={18} /> DreamNest coaching
         </div>

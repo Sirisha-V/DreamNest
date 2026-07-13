@@ -113,9 +113,9 @@ const DreamsPage = () => {
     }
   };
 
-  const handleAddSavings = async (amount: number, notes: string) => {
+  const handleAddSavings = async (amount: number, date: string, notes: string) => {
     if (!activeDream) return;
-    await saveToDream(activeDream.id, amount, notes);
+    await saveToDream(activeDream.id, amount, notes, date);
     setToast(`Added ₹${amount} to ${activeDream.title}`);
     setSavingsOpen(false);
   };
@@ -144,7 +144,7 @@ const DreamsPage = () => {
   };
 
   return (
-    <div className="dreams-page">
+    <div className="dreams-page app-standard-page">
       <div className="section-header">
         <div>
           <p className="eyebrow">Dream Library</p>

@@ -1,5 +1,8 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Home, Sparkles, BarChart3, Wallet2, UserCircle2, Settings, LogOut, Plus, HeartHandshake, PlusCircle } from 'lucide-react';
+import { useDreams } from '../context/DreamContext';
+import OnboardingExperience from './OnboardingExperience';
+import { getOnboardingPending } from '../lib/onboarding';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: Home },
@@ -14,6 +17,7 @@ const navItems = [
 
 const mobileNavItems = [
   { to: '/', label: 'Home', icon: Home },
+  { to: '/monthly-savings', label: 'Savings', icon: Wallet2 },
   { to: '/dreams', label: 'Dreams', icon: Sparkles },
   { to: '/transactions', label: 'Money', icon: Wallet2 },
   { to: '/analytics', label: 'Stats', icon: BarChart3 },
@@ -22,6 +26,8 @@ const mobileNavItems = [
 
 const Layout = () => {
   const navigate = useNavigate();
+  const { onboardingCompleted } = useDreams();
+  const shouldShowOnboarding = getOnboardingPending() && !onboardingCompleted;
 
   const handleLogout = () => {
     localStorage.removeItem('dreamnest_token');
@@ -34,6 +40,7 @@ const Layout = () => {
 
   return (
     <div className="app-shell">
+      {shouldShowOnboarding ? <OnboardingExperience /> : null}
       <div className="app-layout">
         <aside className="sidebar">
           <div className="brand-block">

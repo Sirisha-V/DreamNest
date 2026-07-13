@@ -15,7 +15,7 @@ const CoupleCornerPage = () => {
   );
 
   return (
-    <div className="page-grid">
+    <div className="page-grid app-standard-page">
       <section className="page-panel couple-hero-panel">
         <div className="page-hero">
           <p className="eyebrow">Couple Corner</p>

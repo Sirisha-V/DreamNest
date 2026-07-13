@@ -49,7 +49,7 @@ const SimulatorPage = () => {
 
   if (!goal) {
     return (
-      <div className="page-grid">
+      <div className="page-grid app-standard-page">
         <section className="page-panel page-hero">
           <div className="theme-pill">Dream Simulator</div>
           <h2>No dream selected</h2>
@@ -62,7 +62,7 @@ const SimulatorPage = () => {
   }
 
   return (
-    <div className="page-grid">
+    <div className="page-grid app-standard-page">
       <section className="page-panel page-hero">
         <div className="theme-pill">Dream Simulator</div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -37,7 +37,7 @@ const SettingsPage = () => {
   };
 
   return (
-    <div className="page-grid">
+    <div className="page-grid app-standard-page">
       <section className="page-panel page-hero">
         <div className="theme-pill">Settings</div>
         <div>

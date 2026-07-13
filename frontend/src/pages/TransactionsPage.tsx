@@ -27,7 +27,7 @@ const TransactionsPage = () => {
   ];
 
   return (
-    <div className="page-grid">
+    <div className="page-grid app-standard-page">
       <section className="page-panel page-hero">
         <div className="theme-pill">Transactions</div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

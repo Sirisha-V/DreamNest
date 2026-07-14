@@ -12,3 +12,4 @@ Use this index to navigate all project documentation.
 8. [Data Persistence and Sync](08-data-persistence-and-sync.md)
 9. [Testing and QA Checklist](09-testing-and-qa-checklist.md)
 10. [User Guide](10-user-guide.md)
+11. [Quick User Guide (Non-Technical)](11-user-guide-quick.md)

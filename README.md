@@ -26,6 +26,7 @@ Detailed documentation is available in the [docs](docs) folder:
 8. [Data Persistence and Sync](docs/08-data-persistence-and-sync.md)
 9. [Testing and QA Checklist](docs/09-testing-and-qa-checklist.md)
 10. [User Guide](docs/10-user-guide.md)
+11. [Quick User Guide (Non-Technical)](docs/11-user-guide-quick.md)
 
 ## Quick Start
 

@@ -138,7 +138,7 @@ function getAuthUser(req) {
     return null;
   }
 
-  return getUserByEmail(email);
+  return getUserByEmail(email) || getOrCreateUser(email, defaultNameFromEmail(email));
 }
 
 function getUserGoals(userId) {

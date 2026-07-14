@@ -65,7 +65,7 @@ const TransactionsPage = () => {
         <div className="panel-actions">
           <div>
             <p className="setting-title">Recent activity</p>
-            <p className="setting-detail">{transactionSummary ? `${transactionSummary.recent_transactions.length} recent entries surfaced from the API.` : 'Waiting for live transaction data.'}</p>
+            <p className="setting-detail">{transactionSummary ? `${transactionSummary.recent_transactions.length} recent entries in your ledger.` : 'Waiting for transaction data.'}</p>
           </div>
           <div className="panel-actions">
             <button className="filter-pill" type="button" onClick={() => setActiveFilter('all')}><RefreshCw size={15} /> Reset</button>

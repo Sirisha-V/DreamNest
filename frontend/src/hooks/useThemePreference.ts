@@ -1,37 +1,32 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 
 const THEME_STORAGE_KEY = 'dreamnest-theme';
 
-type ThemeMode = 'light' | 'dark';
+type ThemeMode = 'light';
 
-const getInitialTheme = (): ThemeMode => {
-  const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
-  if (savedTheme === 'dark' || savedTheme === 'light') {
-    return savedTheme;
-  }
-
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-};
-
-const applyTheme = (theme: ThemeMode) => {
-  document.documentElement.classList.toggle('theme-dark', theme === 'dark');
+const applyTheme = () => {
+  document.documentElement.classList.remove('theme-dark');
 };
 
 export const useThemePreference = () => {
-  const [theme, setTheme] = useState<ThemeMode>(() => getInitialTheme());
-
   useEffect(() => {
-    applyTheme(theme);
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-  }, [theme]);
+    applyTheme();
+    window.localStorage.setItem(THEME_STORAGE_KEY, 'light');
+  }, []);
+
+  const setTheme = useCallback((_nextTheme: ThemeMode) => {
+    applyTheme();
+    window.localStorage.setItem(THEME_STORAGE_KEY, 'light');
+  }, []);
 
   const toggleTheme = useCallback(() => {
-    setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'));
+    applyTheme();
+    window.localStorage.setItem(THEME_STORAGE_KEY, 'light');
   }, []);
 
   return {
-    theme,
-    isDarkMode: theme === 'dark',
+    theme: 'light' as ThemeMode,
+    isDarkMode: false,
     setTheme,
     toggleTheme,
   };

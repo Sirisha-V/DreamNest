@@ -1,20 +1,46 @@
 import { useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
-import { Camera, ShieldCheck, Bell, Sparkles } from 'lucide-react';
+import { Camera } from 'lucide-react';
 import Toast from '../components/Toast';
-import { useThemePreference } from '../hooks/useThemePreference';
+import { useDreams } from '../context/DreamContext';
 
 const AVATAR_STORAGE_KEY = 'dreamnest-avatar-data';
 const MAX_PHOTO_SIZE_BYTES = 2 * 1024 * 1024;
+const ACTIVE_USER_HINT_KEY = 'dreamnest_active_user_hint';
+
+const toDisplayNameFromEmail = (email: string) => {
+  const localPart = email.split('@')[0] ?? '';
+  if (!localPart) {
+    return '';
+  }
+
+  return localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((token) => token[0].toUpperCase() + token.slice(1))
+    .join(' ');
+};
 
 const ProfilePage = () => {
-  const { isDarkMode, toggleTheme } = useThemePreference();
-  const [milestoneAlerts, setMilestoneAlerts] = useState(() => window.localStorage.getItem('dreamnest-milestones') !== 'off');
+  const { dashboard } = useDreams();
   const [avatarDataUrl, setAvatarDataUrl] = useState(() => window.localStorage.getItem(AVATAR_STORAGE_KEY) ?? '');
   const [toast, setToast] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const accountName = 'Sirisha R.';
-  const accountEmail = 'sirisha@example.com';
+  const sessionEmail = (window.localStorage.getItem(ACTIVE_USER_HINT_KEY) ?? '').trim().toLowerCase();
+
+  const accountName = useMemo(() => {
+    const dashboardName = (dashboard.user ?? '').trim();
+    const normalizedDashboardName = dashboardName.toLowerCase();
+    const genericDashboardNames = new Set(['dreamer', 'nana', 'user']);
+
+    if (dashboardName && !genericDashboardNames.has(normalizedDashboardName)) {
+      return dashboardName;
+    }
+
+    return toDisplayNameFromEmail(sessionEmail) || 'User';
+  }, [dashboard.user, sessionEmail]);
+
+  const accountEmail = sessionEmail || 'No email available';
 
   const initials = useMemo(() => {
     const tokens = accountName.trim().split(/\s+/).filter(Boolean);
@@ -26,18 +52,6 @@ const ProfilePage = () => {
     const second = tokens[1]?.[0] ?? '';
     return `${first}${second}`.toUpperCase();
   }, [accountName]);
-
-  const handleMilestoneToggle = () => {
-    const nextValue = !milestoneAlerts;
-    setMilestoneAlerts(nextValue);
-    window.localStorage.setItem('dreamnest-milestones', nextValue ? 'on' : 'off');
-    setToast(nextValue ? 'Milestone notifications enabled' : 'Milestone notifications disabled');
-  };
-
-  const handleThemeToggle = () => {
-    toggleTheme();
-    setToast(isDarkMode ? 'Light mode enabled' : 'Dark mode enabled');
-  };
 
   const openPhotoPicker = () => {
     fileInputRef.current?.click();
@@ -87,6 +101,7 @@ const ProfilePage = () => {
     <div className="page-grid app-standard-page">
       <section className="page-panel page-hero">
         <div className="theme-pill">Profile</div>
+        <p className="setting-detail">Showing your login info only.</p>
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-xl font-semibold text-white">
@@ -105,52 +120,6 @@ const ProfilePage = () => {
           <button type="button" className="button button-ghost button-icon" onClick={openPhotoPicker}><Camera size={16} /> Update photo</button>
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoSelected} className="hidden" />
         </div>
-      </section>
-
-      <section className="page-grid lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="page-panel profile-card">
-          <div className="panel-actions">
-            <div className="theme-pill"><ShieldCheck size={16} /> Security</div>
-          </div>
-          <div className="space-y-3">
-            <div className="setting-card">
-              <p className="setting-title">Two-factor authentication enabled</p>
-            </div>
-            <div className="setting-card">
-              <p className="setting-title">Password last changed 2 weeks ago</p>
-            </div>
-          </div>
-        </div>
-        <div className="page-panel profile-card">
-          <div className="panel-actions">
-            <div className="theme-pill"><Bell size={16} /> Preferences</div>
-          </div>
-          <div className="space-y-3">
-            <div className="setting-card">
-              <div className="panel-actions">
-                <span>Dark mode</span>
-                <button type="button" className={`toggle-button ${isDarkMode ? 'toggle-button-on' : ''}`} onClick={handleThemeToggle} aria-label="Toggle dark mode" aria-pressed={isDarkMode}>
-                  <span className="toggle-knob" />
-                </button>
-              </div>
-            </div>
-            <div className="setting-card">
-              <div className="panel-actions">
-                <p className="setting-title">Milestone notifications</p>
-                <button type="button" className={`toggle-button ${milestoneAlerts ? 'toggle-button-on' : ''}`} onClick={handleMilestoneToggle} aria-label="Toggle milestone notifications" aria-pressed={milestoneAlerts}>
-                  <span className="toggle-knob" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="page-panel profile-coach-card">
-        <div className="panel-actions">
-          <Sparkles size={18} /> DreamNest coaching
-        </div>
-        <p className="setting-detail">You are currently pacing well toward your top three goals. Consider adding a small automated transfer this month to stay ahead of schedule.</p>
       </section>
 
       <Toast message={toast} open={Boolean(toast)} onClose={() => setToast('')} />

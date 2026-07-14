@@ -10,6 +10,43 @@ const toMonthLabel = (monthsAhead: number) => {
   return new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric' }).format(target);
 };
 
+const inferMonthlyContribution = (savedAmount: number, monthsSaved: number, explicitMonthlyContribution: number) => {
+  const explicit = Number(explicitMonthlyContribution) || 0;
+  if (explicit > 0) {
+    return explicit;
+  }
+
+  const saved = Number(savedAmount) || 0;
+  const months = Number(monthsSaved) || 0;
+  if (saved > 0 && months > 0) {
+    return Math.max(1, saved / months);
+  }
+
+  return 0;
+};
+
+const toYearMonth = (dateText: string) => {
+  const parsed = new Date(`${dateText}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}`;
+};
+
+const monthlyConsistency = (amounts: number[]) => {
+  if (amounts.length === 0) {
+    return { avg: 0, stdDev: 0, samples: 0 };
+  }
+
+  const avg = amounts.reduce((sum, value) => sum + value, 0) / amounts.length;
+  const variance = amounts.reduce((sum, value) => sum + ((value - avg) ** 2), 0) / amounts.length;
+  return {
+    avg,
+    stdDev: Math.sqrt(variance),
+    samples: amounts.length,
+  };
+};
+
 const AnalyticsPage = () => {
   const {
     goals,
@@ -35,12 +72,35 @@ const AnalyticsPage = () => {
     const remainingAmount = Math.max(0, totalTarget - totalSaved);
     const overallCompletion = totalTarget > 0 ? Math.min(100, (totalSaved / totalTarget) * 100) : 0;
 
+    const savingsByDream = new Map<number, number[]>();
+    goals.forEach((goal) => {
+      const monthBuckets = new Map<string, number>();
+      savingsHistory
+        .filter((entry) => entry.dreamId === goal.id)
+        .forEach((entry) => {
+          const bucket = toYearMonth(entry.date);
+          if (!bucket) {
+            return;
+          }
+          monthBuckets.set(bucket, (monthBuckets.get(bucket) ?? 0) + entry.amount);
+        });
+
+      savingsByDream.set(goal.id, [...monthBuckets.values()]);
+    });
+
     const dreamCards = goals.map((goal, index) => {
-      const suggestedWeekly = Math.max(200, Math.ceil((goal.remaining_amount / 12) / 100) * 100);
-      const currentMonthly = Math.max(goal.monthly_contribution || 0, suggestedWeekly * 4);
-      const baselineMonths = currentMonthly > 0 ? Math.ceil(goal.remaining_amount / currentMonthly) : 0;
-      const acceleratedMonths = suggestedWeekly > 0 ? Math.ceil(goal.remaining_amount / (suggestedWeekly * 4.33)) : baselineMonths;
-      const earlierByMonths = Math.max(0, baselineMonths - acceleratedMonths);
+      const currentMonthly = inferMonthlyContribution(goal.saved_amount, goal.months_saved, goal.monthly_contribution);
+      const suggestedMonthly = Math.max(
+        currentMonthly > 0 ? Math.ceil((currentMonthly * 1.2) / 100) * 100 : 0,
+        Math.ceil((goal.remaining_amount / 12) / 100) * 100,
+      );
+      const suggestedWeekly = Math.max(200, Math.ceil((suggestedMonthly / 4.33) / 100) * 100);
+
+      const baselineMonths = currentMonthly > 0 ? Math.ceil(goal.remaining_amount / currentMonthly) : null;
+      const acceleratedMonths = suggestedMonthly > 0 ? Math.ceil(goal.remaining_amount / suggestedMonthly) : null;
+      const earlierByMonths = baselineMonths !== null && acceleratedMonths !== null
+        ? Math.max(0, baselineMonths - acceleratedMonths)
+        : 0;
 
       return {
         id: goal.id,
@@ -50,15 +110,76 @@ const AnalyticsPage = () => {
         saved: goal.saved_amount,
         target: goal.target_amount,
         remaining: goal.remaining_amount,
-        completionDate: goal.deadline ?? toMonthLabel(acceleratedMonths),
+        completionDate: goal.deadline ?? (baselineMonths !== null ? toMonthLabel(baselineMonths) : 'Add monthly contribution'),
         suggestedWeekly,
         earlierByMonths,
       };
     });
 
     const totalRemaining = goals.reduce((sum, goal) => sum + goal.remaining_amount, 0);
-    const forecastSlowMonths = Math.ceil(totalRemaining / (500 * 4.33 || 1));
-    const forecastFastMonths = Math.ceil(totalRemaining / (800 * 4.33 || 1));
+    const totalCurrentMonthlyContribution = goals.reduce((sum, goal) => (
+      sum + inferMonthlyContribution(goal.saved_amount, goal.months_saved, goal.monthly_contribution)
+    ), 0);
+    const boostedMonthlyContribution = totalCurrentMonthlyContribution > 0
+      ? Math.ceil((totalCurrentMonthlyContribution * 1.35) / 100) * 100
+      : 0;
+    const forecastCurrentMonths = totalCurrentMonthlyContribution > 0
+      ? Math.ceil(totalRemaining / totalCurrentMonthlyContribution)
+      : null;
+    const forecastBoostedMonths = boostedMonthlyContribution > 0
+      ? Math.ceil(totalRemaining / boostedMonthlyContribution)
+      : null;
+
+    const dreamForecasts = goals.map((goal) => {
+      const monthlySeries = savingsByDream.get(goal.id) ?? [];
+      const consistency = monthlyConsistency(monthlySeries);
+      const plannedMonthly = inferMonthlyContribution(goal.saved_amount, goal.months_saved, goal.monthly_contribution);
+      const baseMonthly = plannedMonthly > 0 ? plannedMonthly : consistency.avg;
+
+      if (goal.remaining_amount <= 0) {
+        return {
+          id: goal.id,
+          name: goal.title,
+          likelyCompletion: 'Completed',
+          earliestCompletion: 'Completed',
+          latestCompletion: 'Completed',
+          confidence: 'High',
+        };
+      }
+
+      if (baseMonthly <= 0) {
+        return {
+          id: goal.id,
+          name: goal.title,
+          likelyCompletion: 'Add monthly contribution in this dream',
+          earliestCompletion: 'N/A',
+          latestCompletion: 'N/A',
+          confidence: 'Low',
+        };
+      }
+
+      const lowMonthly = Math.max(1, baseMonthly - consistency.stdDev);
+      const highMonthly = Math.max(lowMonthly, baseMonthly + consistency.stdDev);
+      const likelyMonths = Math.ceil(goal.remaining_amount / baseMonthly);
+      const earliestMonths = Math.ceil(goal.remaining_amount / highMonthly);
+      const latestMonths = Math.ceil(goal.remaining_amount / lowMonthly);
+
+      const cv = consistency.avg > 0 ? (consistency.stdDev / consistency.avg) : 1;
+      const confidence = consistency.samples >= 4 && cv <= 0.25
+        ? 'High'
+        : consistency.samples >= 3 && cv <= 0.6
+          ? 'Medium'
+          : 'Low';
+
+      return {
+        id: goal.id,
+        name: goal.title,
+        likelyCompletion: toMonthLabel(likelyMonths),
+        earliestCompletion: toMonthLabel(earliestMonths),
+        latestCompletion: toMonthLabel(latestMonths),
+        confidence,
+      };
+    });
 
     const badges = [
       { id: 'first-dream', icon: '✅', title: 'First Dream', detail: 'Created your first dream.' },
@@ -98,9 +219,14 @@ const AnalyticsPage = () => {
       remainingAmount,
       overallCompletion,
       dreamCards,
-      forecastSlow: toMonthLabel(forecastSlowMonths),
-      forecastFast: toMonthLabel(forecastFastMonths),
-      finishEarlier: Math.max(0, forecastSlowMonths - forecastFastMonths),
+      forecastCurrent: forecastCurrentMonths !== null ? toMonthLabel(forecastCurrentMonths) : null,
+      forecastBoosted: forecastBoostedMonths !== null ? toMonthLabel(forecastBoostedMonths) : null,
+      currentContributionPerMonth: totalCurrentMonthlyContribution,
+      boostedContributionPerMonth: boostedMonthlyContribution,
+      finishEarlier: forecastCurrentMonths !== null && forecastBoostedMonths !== null
+        ? Math.max(0, forecastCurrentMonths - forecastBoostedMonths)
+        : 0,
+      dreamForecasts,
       badges,
       weekly: {
         dreamsCreated: dreamsCreatedThisWeek,
@@ -173,15 +299,18 @@ const AnalyticsPage = () => {
           <h3 className="setting-title">Predict completion with your pace</h3>
         </div>
         <div className="coach-forecast-grid">
-          <article className="setting-card">
-            <p className="setting-title">If you continue saving ₹500/week</p>
-            <p className="metric-value">Expected Completion: {analytics.forecastSlow}</p>
-          </article>
-          <article className="setting-card">
-            <p className="setting-title">If you increase to ₹800/week</p>
-            <p className="metric-value">Expected Completion: {analytics.forecastFast}</p>
-            <p className="setting-detail">Finish {analytics.finishEarlier} months earlier</p>
-          </article>
+          {analytics.dreamForecasts.length === 0 ? (
+            <article className="setting-card">
+              <p className="setting-detail">Create your first dream to generate a forecast.</p>
+            </article>
+          ) : analytics.dreamForecasts.map((forecast) => (
+            <article key={forecast.id} className="setting-card">
+              <p className="setting-title">{forecast.name}</p>
+              <p className="metric-value">Likely completion: {forecast.likelyCompletion}</p>
+              <p className="setting-detail">Range: {forecast.earliestCompletion} to {forecast.latestCompletion}</p>
+              <p className="setting-detail">Confidence: {forecast.confidence}</p>
+            </article>
+          ))}
         </div>
       </section>
 

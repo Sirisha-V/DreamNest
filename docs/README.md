@@ -11,3 +11,4 @@ Use this index to navigate all project documentation.
 7. [Deployment (Netlify)](07-deployment-netlify.md)
 8. [Data Persistence and Sync](08-data-persistence-and-sync.md)
 9. [Testing and QA Checklist](09-testing-and-qa-checklist.md)
+10. [User Guide](10-user-guide.md)

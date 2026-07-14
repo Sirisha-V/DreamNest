@@ -1,32 +1,23 @@
-# React + TypeScript + Vite
+# DreamNest Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+This folder contains the React + TypeScript + Vite frontend for DreamNest.
 
-Currently, two official plugins are available:
+## Scripts
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- `npm run dev` - run Vite dev server
+- `npm run build` - TypeScript build + Vite production build
+- `npm run lint` - lint checks
+- `npm run preview` - preview production build locally
 
-## React Compiler
+## Main Frontend Areas
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Routes and app entry: [src/App.tsx](src/App.tsx)
+- Global app state: [src/context/DreamContext.tsx](src/context/DreamContext.tsx)
+- API client: [src/lib/api.ts](src/lib/api.ts)
+- Core styling: [src/index.css](src/index.css)
 
-## Expanding the Oxlint configuration
+## Full Documentation
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Project-wide documentation is maintained in:
+- [../README.md](../README.md)
+- [../docs](../docs)

@@ -772,10 +772,28 @@ export const DreamProvider = ({ children }: { children: React.ReactNode }) => {
   }, [applySnapshot, goals, savingsHistory, transactions]);
 
   const removeTransaction = useCallback(async (transactionId: number) => {
-    await withTimeout(deleteTransaction(transactionId), 4500);
-    const nextTransactions = transactions.filter((item) => item.id !== transactionId);
-    const nextHistory = buildSavingsHistory(goals, nextTransactions, savingsHistory);
-    applySnapshot(goals, nextTransactions, nextHistory);
+    try {
+      await withTimeout(deleteTransaction(transactionId), 4500);
+      const nextTransactions = transactions.filter((item) => item.id !== transactionId);
+      const nextHistory = buildSavingsHistory(goals, nextTransactions, savingsHistory);
+      applySnapshot(goals, nextTransactions, nextHistory);
+      return;
+    } catch (err) {
+      // Reconcile against backend state to avoid false-negative delete failures.
+      try {
+        const latestTransactions = await withTimeout(fetchTransactions(), 4500);
+        const stillExists = latestTransactions.some((item) => item.id === transactionId);
+        if (!stillExists) {
+          const nextHistory = buildSavingsHistory(goals, latestTransactions, savingsHistory);
+          applySnapshot(goals, latestTransactions, nextHistory);
+          return;
+        }
+      } catch {
+        // If reconciliation also fails, surface the original error.
+      }
+
+      throw err;
+    }
   }, [applySnapshot, goals, savingsHistory, transactions]);
 
   const saveToDream = useCallback(async (goalId: number, amount: number, _notes?: string, occurredOn?: string) => (

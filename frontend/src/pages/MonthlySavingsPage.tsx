@@ -85,6 +85,7 @@ const MonthlySavingsPage = () => {
   const [editOccurredOn, setEditOccurredOn] = useState('');
 
   const [saving, setSaving] = useState(false);
+  const [deletingTransactionId, setDeletingTransactionId] = useState<number | null>(null);
   const [query, setQuery] = useState('');
   const [filterKind, setFilterKind] = useState<'all' | Transaction['kind']>('all');
   const [sortMode, setSortMode] = useState<SortMode>('latest');
@@ -338,11 +339,15 @@ const MonthlySavingsPage = () => {
   };
 
   const handleDeleteTransaction = async (transaction: Transaction) => {
+    if (deletingTransactionId !== null) {
+      return;
+    }
+
     if (!window.confirm(`Delete ${transaction.category}? This cannot be undone.`)) {
       return;
     }
 
-    setSaving(true);
+    setDeletingTransactionId(transaction.id);
     try {
       await removeTransaction(transaction.id);
       setToast('Transaction deleted successfully');
@@ -352,16 +357,28 @@ const MonthlySavingsPage = () => {
     } catch (err) {
       setToast(err instanceof Error ? err.message : 'Unable to delete transaction');
     } finally {
-      setSaving(false);
+      setDeletingTransactionId(null);
     }
   };
 
   const transactionActions = (transaction: Transaction) => (
     <div className="transaction-actions">
-      <button type="button" className="icon-action-button" onClick={() => openEdit(transaction)} aria-label={`Edit ${transaction.category}`}>
+      <button
+        type="button"
+        className="icon-action-button"
+        onClick={() => openEdit(transaction)}
+        aria-label={`Edit ${transaction.category}`}
+        disabled={deletingTransactionId !== null}
+      >
         <Edit3 size={14} />
       </button>
-      <button type="button" className="icon-action-button icon-action-button-danger" onClick={() => void handleDeleteTransaction(transaction)} aria-label={`Delete ${transaction.category}`}>
+      <button
+        type="button"
+        className="icon-action-button icon-action-button-danger"
+        onClick={() => void handleDeleteTransaction(transaction)}
+        aria-label={deletingTransactionId === transaction.id ? `Deleting ${transaction.category}` : `Delete ${transaction.category}`}
+        disabled={deletingTransactionId !== null}
+      >
         <Trash2 size={14} />
       </button>
     </div>

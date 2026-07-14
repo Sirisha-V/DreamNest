@@ -14,8 +14,11 @@ import CoupleCornerPage from './pages/CoupleCornerPage';
 import TimelinePage from './pages/TimelinePage';
 import SimulatorPage from './pages/SimulatorPage';
 import ProtectedRoute from './routes/ProtectedRoute';
+import { isStoredSessionValid } from './lib/auth';
 
 function App() {
+  const fallbackPath = isStoredSessionValid() ? '/' : '/login';
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -35,7 +38,7 @@ function App() {
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to={fallbackPath} replace />} />
     </Routes>
   );
 }

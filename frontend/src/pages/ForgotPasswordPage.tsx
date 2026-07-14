@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles, ShieldCheck } from 'lucide-react';
 import { resetPassword } from '../lib/api';
+import { clearStoredSession, storeLocalCredential, validatePassword } from '../lib/auth';
 
 const ForgotPasswordPage = () => {
   const navigate = useNavigate();
@@ -13,13 +14,19 @@ const ForgotPasswordPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    localStorage.removeItem('dreamnest_token');
+    clearStoredSession();
   }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
     setMessage('');
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match');
@@ -28,7 +35,9 @@ const ForgotPasswordPage = () => {
 
     setIsSubmitting(true);
     try {
-      await resetPassword({ email, password });
+      const trimmedEmail = email.trim().toLowerCase();
+      await resetPassword({ email: trimmedEmail, password });
+      storeLocalCredential(trimmedEmail, password);
       setMessage('Password updated. You can sign in now.');
       setPassword('');
       setConfirmPassword('');

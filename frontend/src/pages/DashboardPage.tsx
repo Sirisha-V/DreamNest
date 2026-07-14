@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Activity, BarChart3, CalendarDays, CheckCircle2, HeartHandshake, Sparkles, Trash2, Wallet } from 'lucide-react';
 import { useDreams } from '../context/DreamContext';
 import { type Goal } from '../lib/api';
+import { getOnboardingName } from '../lib/onboarding';
 import AddSavingsModal from '../components/AddSavingsModal';
 import Toast from '../components/Toast';
 
@@ -18,6 +19,7 @@ type MissionCard = {
 
 const DashboardPage = () => {
   const navigate = useNavigate();
+  const welcomeName = getOnboardingName();
   const {
     dashboard,
     goals,
@@ -131,7 +133,7 @@ const DashboardPage = () => {
       <section className="hero-card coach-daily-hero">
         <div className="hero-copy">
           <p className="eyebrow">Today's Mission ❤️</p>
-          <h2 className="hero-title">Welcome Nana ❤️</h2>
+          <h2 className="hero-title">{`Welcome Home, ${welcomeName} ❤️`}</h2>
           <p className="hero-text">Today is Day 1 of something amazing.</p>
           <p className="setting-detail">{todayMissionCompletion}/3 missions complete today</p>
         </div>

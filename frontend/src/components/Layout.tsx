@@ -3,6 +3,7 @@ import { Home, Sparkles, BarChart3, Wallet2, UserCircle2, Settings, LogOut, Plus
 import { useDreams } from '../context/DreamContext';
 import OnboardingExperience from './OnboardingExperience';
 import { getOnboardingPending } from '../lib/onboarding';
+import { clearStoredSession } from '../lib/auth';
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: Home },
@@ -20,6 +21,7 @@ const mobileNavItems = [
   { to: '/monthly-savings', label: 'Savings', icon: Wallet2 },
   { to: '/dreams', label: 'Dreams', icon: Sparkles },
   { to: '/transactions', label: 'Money', icon: Wallet2 },
+  { to: '/couple-corner', label: 'Couple', icon: HeartHandshake },
   { to: '/analytics', label: 'Stats', icon: BarChart3 },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
@@ -30,7 +32,7 @@ const Layout = () => {
   const shouldShowOnboarding = getOnboardingPending() && !onboardingCompleted;
 
   const handleLogout = () => {
-    localStorage.removeItem('dreamnest_token');
+    clearStoredSession();
     navigate('/login');
   };
 

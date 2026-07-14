@@ -1,3 +1,5 @@
+import { clearStoredSession } from './auth';
+
 const RUNTIME_HOST = typeof window !== 'undefined' ? window.location.hostname : '127.0.0.1';
 const IS_LOCAL_RUNTIME = RUNTIME_HOST === 'localhost' || RUNTIME_HOST === '127.0.0.1';
 const API_BASE_URL = import.meta.env.VITE_API_URL || (IS_LOCAL_RUNTIME ? `http://${RUNTIME_HOST}:8000` : '/api');
@@ -115,8 +117,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   }
 
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
-      localStorage.removeItem('dreamnest_token');
+    if ((response.status === 401 || response.status === 403) && options.auth !== false) {
+      clearStoredSession();
       throw new Error('Session expired. Please sign in again.');
     }
     const errorText = await response.text();

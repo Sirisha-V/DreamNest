@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Sparkles } from 'lucide-react';
 import { useDreams } from '../context/DreamContext';
+import { getOnboardingName } from '../lib/onboarding';
 
 type Stage = 'celebration' | 'letter' | 'wizard' | 'success';
 
@@ -31,6 +32,7 @@ const defaultWizard: WizardData = {
 
 const OnboardingExperience = () => {
   const { addDream, completeOnboarding, grantDreamCoins } = useDreams();
+  const onboardingName = getOnboardingName();
   const [stage, setStage] = useState<Stage>('celebration');
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
@@ -131,7 +133,7 @@ const OnboardingExperience = () => {
             ))}
           </div>
           <p className="onboarding-pill">Premium Welcome</p>
-          <h2>🎉 Happy Birthday Nana ❤️</h2>
+          <h2>{`🎉 Happy Birthday ${onboardingName} ❤️`}</h2>
           <p>I've been waiting for you to open this.</p>
         </div>
       ) : null}
@@ -139,7 +141,7 @@ const OnboardingExperience = () => {
       {stage === 'letter' ? (
         <article className="onboarding-letter-modal">
           <p className="onboarding-pill">A Letter For You</p>
-          <h3>Dear Nana,</h3>
+          <h3>{`Dear ${onboardingName},`}</h3>
           <p>
             Birthdays usually come with cakes and gifts.
             <br />
@@ -272,7 +274,7 @@ const OnboardingExperience = () => {
             ))}
           </div>
           <p className="onboarding-pill">First Dream Unlocked</p>
-          <h2>Amazing Nana! Your first dream is ready. ❤️</h2>
+          <h2>{`Amazing ${onboardingName}! Your first dream is ready. ❤️`}</h2>
           <p>+50 Dream Coins added to your Dream Jar.</p>
         </div>
       ) : null}

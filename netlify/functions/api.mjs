@@ -105,6 +105,15 @@ function getOrCreateUser(email, name, password = "") {
   return user;
 }
 
+function getUserByEmail(email) {
+  const normalizedEmail = String(email || "").toLowerCase().trim();
+  if (!normalizedEmail) {
+    return null;
+  }
+
+  return usersByEmail.get(normalizedEmail) || null;
+}
+
 function getEmailFromToken(token) {
   try {
     const decoded = Buffer.from(token, "base64url").toString("utf8");
@@ -129,7 +138,7 @@ function getAuthUser(req) {
     return null;
   }
 
-  return getOrCreateUser(email, defaultNameFromEmail(email));
+  return getUserByEmail(email);
 }
 
 function getUserGoals(userId) {
@@ -226,6 +235,10 @@ export default async (req) => {
       return textResponse("Email and password are required", 400);
     }
 
+    if (getUserByEmail(email)) {
+      return textResponse("An account with this email already exists", 409);
+    }
+
     getOrCreateUser(email, name, password);
 
     return jsonResponse({
@@ -243,14 +256,14 @@ export default async (req) => {
       return textResponse("Email and password are required", 400);
     }
 
-    const user = getOrCreateUser(email, defaultNameFromEmail(email), password);
+    const user = getUserByEmail(email);
     if (!user) {
-      return textResponse("Invalid email or password", 401);
+      return textResponse("Account not found", 404);
     }
 
-    // Keep login resilient across stateless cold starts by accepting the latest password input.
-    user.password = password;
-    usersByEmail.set(email, user);
+    if (!user.password || user.password !== password) {
+      return textResponse("Wrong password", 401);
+    }
 
     return jsonResponse({
       access_token: signToken(email),
@@ -267,7 +280,10 @@ export default async (req) => {
       return textResponse("Email and password are required", 400);
     }
 
-    const user = getOrCreateUser(email, defaultNameFromEmail(email), password);
+    const user = getUserByEmail(email);
+    if (!user) {
+      return textResponse("Account not found", 404);
+    }
 
     user.password = password;
     usersByEmail.set(email, user);

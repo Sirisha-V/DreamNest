@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles, ShieldCheck, Gift } from 'lucide-react';
-import { loginUser } from '../lib/api';
+import { loginUser, registerUser } from '../lib/api';
+import { clearStoredSession, getLocalCredential, storeLocalCredential, storeSession } from '../lib/auth';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -10,11 +11,11 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showBirthdaySurprise, setShowBirthdaySurprise] = useState(false);
-  const [surpriseStep, setSurpriseStep] = useState<'intro' | 'message'>('intro');
+  const [surpriseStep, setSurpriseStep] = useState<'intro' | 'message' | 'about'>('intro');
   const hasContinuedRef = useRef(false);
 
   useEffect(() => {
-    localStorage.removeItem('dreamnest_token');
+    clearStoredSession();
   }, []);
 
   useEffect(() => {
@@ -28,21 +29,17 @@ const LoginPage = () => {
       setSurpriseStep('message');
     }, 1200);
 
-    const autoContinueTimer = window.setTimeout(() => {
-      if (hasContinuedRef.current) {
-        return;
-      }
-      hasContinuedRef.current = true;
-      navigate('/');
-    }, 3400);
-
     return () => {
       window.clearTimeout(showMessageTimer);
-      window.clearTimeout(autoContinueTimer);
     };
-  }, [showBirthdaySurprise, navigate]);
+  }, [showBirthdaySurprise]);
 
   const continueToDashboard = () => {
+    if (surpriseStep !== 'about') {
+      setSurpriseStep('about');
+      return;
+    }
+
     if (hasContinuedRef.current) {
       return;
     }
@@ -55,13 +52,40 @@ const LoginPage = () => {
     setError('');
     setIsSubmitting(true);
 
+    const trimmedEmail = email.trim().toLowerCase();
+    const knownPassword = getLocalCredential(trimmedEmail);
+    if (knownPassword && knownPassword !== password) {
+      setError('Wrong password');
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
-      const response = await loginUser({ email, password });
-      localStorage.setItem('dreamnest_token', response.access_token);
+      const response = await loginUser({ email: trimmedEmail, password });
+      storeLocalCredential(trimmedEmail, password);
+      storeSession(response.access_token, trimmedEmail);
       hasContinuedRef.current = false;
       setShowBirthdaySurprise(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to sign in');
+      const message = err instanceof Error ? err.message : 'Unable to sign in';
+
+      if (message.includes('Account not found') && knownPassword === password) {
+        try {
+          const fallbackName = trimmedEmail
+            .split('@')[0]
+            .replace(/[._-]+/g, ' ')
+            .replace(/\b\w/g, (char) => char.toUpperCase()) || 'Dreamer';
+          const response = await registerUser({ name: fallbackName, email: trimmedEmail, password });
+          storeSession(response.access_token, trimmedEmail);
+          hasContinuedRef.current = false;
+          setShowBirthdaySurprise(true);
+          return;
+        } catch {
+          // If rehydrate fails, fall through to original error below.
+        }
+      }
+
+      setError(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -133,7 +157,7 @@ const LoginPage = () => {
 
           <div className="auth-footer">
             <Link to="/forgot-password" className="auth-link">Need a tiny hint? 😉</Link>
-            <Link to="/register" className="auth-link auth-link-strong">Already stolen my heart ❤️</Link>
+            <Link to="/register" className="auth-link auth-link-strong">Create account</Link>
           </div>
         </section>
       </div>
@@ -172,10 +196,17 @@ const LoginPage = () => {
                 <p>Every dream here is one we'll chase together.</p>
                 <p>Love,<br />Siri Papa ❤️</p>
               </div>
+
+              <div className={`birthday-text-group birthday-love-note ${surpriseStep === 'about' ? 'is-visible' : 'is-hidden'}`}>
+                <h3>What DreamNest Is About</h3>
+                <p>DreamNest helps you turn goals into a clear savings plan.</p>
+                <p>Create dreams, track savings, and see your progress in one place.</p>
+                <p>You'll also get missions, Dream Coins, and milestones to keep momentum high.</p>
+              </div>
             </div>
 
             <button type="button" className="button button-primary birthday-continue" onClick={continueToDashboard}>
-              Continue
+              {surpriseStep === 'about' ? 'Enter DreamNest' : 'Continue'}
             </button>
           </div>
         </div>

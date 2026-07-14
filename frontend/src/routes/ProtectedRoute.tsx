@@ -1,8 +1,13 @@
 import { Navigate, Outlet } from 'react-router-dom';
+import { clearStoredSession, isStoredSessionValid } from '../lib/auth';
 
 const ProtectedRoute = () => {
-  const token = localStorage.getItem('dreamnest_token');
-  return token ? <Outlet /> : <Navigate to="/login" replace />;
+  const hasValidSession = isStoredSessionValid();
+  if (!hasValidSession) {
+    clearStoredSession();
+  }
+
+  return hasValidSession ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
 export default ProtectedRoute;

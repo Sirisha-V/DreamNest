@@ -18,6 +18,7 @@ import { clearOnboardingPending } from '../lib/onboarding';
 
 const CACHE_PREFIX = 'dreamnest-cache';
 const FALLBACK_CACHE_KEY = `${CACHE_PREFIX}:last`;
+const ACTIVE_USER_HINT_KEY = 'dreamnest_active_user_hint';
 const DAILY_MISSION_IDS = ['save', 'review', 'budget'] as const;
 type DailyMissionId = typeof DAILY_MISSION_IDS[number];
 
@@ -181,22 +182,75 @@ const base64UrlDecode = (value: string) => {
   return atob(`${normalized}${padding}`);
 };
 
-const getActiveUserEmail = () => {
-  const token = localStorage.getItem('dreamnest_token');
-  if (!token) return null;
+const normalizeIdentityValue = (value: string | null | undefined) => value?.trim().toLowerCase() || null;
+
+const decodeJwtPayload = (token: string): Record<string, unknown> | null => {
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    return null;
+  }
+
   try {
-    const decoded = base64UrlDecode(token);
-    if (!decoded.startsWith('dreamnest:')) return null;
-    return decoded.replace('dreamnest:', '').trim().toLowerCase() || null;
+    const payloadRaw = base64UrlDecode(parts[1]);
+    const payload = JSON.parse(payloadRaw) as Record<string, unknown>;
+    return payload;
   } catch {
     return null;
   }
 };
 
+const getActiveUserIdentity = () => {
+  const token = localStorage.getItem('dreamnest_token');
+  if (!token) return null;
+
+  const payload = decodeJwtPayload(token);
+  if (payload) {
+    const emailCandidate = [payload.email, payload.preferred_username, payload.upn]
+      .find((candidate): candidate is string => typeof candidate === 'string' && candidate.includes('@'));
+    const normalizedEmail = normalizeIdentityValue(emailCandidate);
+    if (normalizedEmail) {
+      return `email:${normalizedEmail}`;
+    }
+
+    const idCandidate = [payload.user_id, payload.uid, payload.id, payload.sub]
+      .find((candidate) => typeof candidate === 'number' || typeof candidate === 'string');
+    if (idCandidate !== undefined && idCandidate !== null) {
+      const normalizedId = normalizeIdentityValue(String(idCandidate));
+      if (normalizedId) {
+        return `id:${normalizedId}`;
+      }
+    }
+  }
+
+  try {
+    const decoded = base64UrlDecode(token);
+    if (decoded.startsWith('dreamnest:')) {
+      const legacyEmail = normalizeIdentityValue(decoded.replace('dreamnest:', ''));
+      if (legacyEmail) {
+        return `email:${legacyEmail}`;
+      }
+    }
+  } catch {
+    // token format may not be decodable as a single base64 string.
+  }
+
+  const userHint = normalizeIdentityValue(localStorage.getItem(ACTIVE_USER_HINT_KEY));
+  if (userHint) {
+    return `hint:${userHint}`;
+  }
+
+  const tokenFingerprint = normalizeIdentityValue(token.slice(-24));
+  if (tokenFingerprint) {
+    return `token:${tokenFingerprint}`;
+  }
+
+  return null;
+};
+
 const getCacheKey = () => {
-  const email = getActiveUserEmail();
-  if (!email) return FALLBACK_CACHE_KEY;
-  return `${CACHE_PREFIX}:${email}`;
+  const identity = getActiveUserIdentity();
+  if (!identity) return FALLBACK_CACHE_KEY;
+  return `${CACHE_PREFIX}:${identity}`;
 };
 
 const normalizeCoachState = (input: Partial<CoachState> | null | undefined): CoachState => {
@@ -218,9 +272,7 @@ const normalizeCoachState = (input: Partial<CoachState> | null | undefined): Coa
 
 const readLocalCache = (): LocalDreamCache | null => {
   const primaryKey = getCacheKey();
-  const candidates = primaryKey === FALLBACK_CACHE_KEY
-    ? [FALLBACK_CACHE_KEY]
-    : [primaryKey, FALLBACK_CACHE_KEY];
+  const candidates = [primaryKey];
 
   for (const key of candidates) {
     try {
@@ -246,9 +298,6 @@ const writeLocalCache = (cache: LocalDreamCache) => {
   const key = getCacheKey();
   const serialized = JSON.stringify(cache);
   localStorage.setItem(key, serialized);
-  if (key !== FALLBACK_CACHE_KEY) {
-    localStorage.setItem(FALLBACK_CACHE_KEY, serialized);
-  }
 };
 
 const computeTransactionSummary = (items: Transaction[]): TransactionSummary => {
@@ -388,7 +437,9 @@ const loadAppData = () => readLocalCache();
 const clearAppData = () => {
   const key = getCacheKey();
   localStorage.removeItem(key);
-  localStorage.removeItem(FALLBACK_CACHE_KEY);
+  if (key === FALLBACK_CACHE_KEY) {
+    localStorage.removeItem(FALLBACK_CACHE_KEY);
+  }
 };
 
 export const DreamProvider = ({ children }: { children: React.ReactNode }) => {

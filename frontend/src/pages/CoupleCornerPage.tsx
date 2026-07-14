@@ -1,13 +1,9 @@
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { HeartHandshake, Sparkles, BadgeDollarSign, Clock3 } from 'lucide-react';
 import { useDreams } from '../context/DreamContext';
 
 const CoupleCornerPage = () => {
   const { goals, loading, error, refresh } = useDreams();
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
 
   const coupleGoals = useMemo(
     () => goals.filter((goal) => goal.is_couple_goal),
@@ -46,7 +42,12 @@ const CoupleCornerPage = () => {
       {loading ? (
         <section className="page-panel">Loading shared dreams…</section>
       ) : error ? (
-        <section className="page-panel">{error}</section>
+        <section className="page-panel">
+          <p>{error}</p>
+          <div className="panel-actions">
+            <button type="button" className="button button-ghost" onClick={() => void refresh()}>Retry</button>
+          </div>
+        </section>
       ) : coupleGoals.length === 0 ? (
         <section className="page-panel">
           <h3>No couple dreams yet</h3>

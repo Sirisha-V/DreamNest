@@ -4,6 +4,7 @@ import { Sparkles, ShieldCheck } from 'lucide-react';
 import { registerUser } from '../lib/api';
 import { markOnboardingPending } from '../lib/onboarding';
 import { useDreams } from '../context/DreamContext';
+import { storeLocalCredential, storeSession, validatePassword } from '../lib/auth';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -32,8 +33,9 @@ const RegisterPage = () => {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 
@@ -46,8 +48,9 @@ const RegisterPage = () => {
 
     try {
       const response = await registerUser({ name: trimmedName, email: trimmedEmail, password });
-      localStorage.setItem('dreamnest_token', response.access_token);
-      markOnboardingPending(trimmedName);
+      storeLocalCredential(trimmedEmail, password);
+      storeSession(response.access_token, trimmedEmail);
+      markOnboardingPending(trimmedName, trimmedEmail);
       initializeUserData(trimmedName);
       navigate('/');
     } catch (err) {

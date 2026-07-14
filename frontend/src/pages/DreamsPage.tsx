@@ -284,7 +284,7 @@ const DreamsPage = () => {
           {timelineOpen ? (
             <DreamTimeline
               title={activeDream.title}
-              createdAt={activeDream.deadline || 'TBD'}
+              createdAt="Created in DreamNest"
               deadline={activeDream.deadline}
               progress={activeDream.progress}
               milestones={[
@@ -294,6 +294,9 @@ const DreamsPage = () => {
                 { label: 'Final stretch', completed: activeDream.progress >= 75 },
               ]}
               monthsSaved={activeDream.months_saved || 0}
+              targetAmount={activeDream.target_amount}
+              savedAmount={activeDream.saved_amount}
+              monthlyContribution={activeDream.monthly_contribution}
             />
           ) : null}
           {simulatorOpen ? (

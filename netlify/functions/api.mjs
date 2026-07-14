@@ -1,10 +1,49 @@
-const usersByEmail = new Map();
-const goalsByUser = new Map();
-const transactionsByUser = new Map();
+import { getStore } from "@netlify/blobs";
 
-let nextUserId = 1;
-let nextGoalId = 1;
-let nextTransactionId = 1;
+const DATA_STORE = getStore("dreamnest-data");
+const DATA_KEY = "db/v1.json";
+
+let stateCache = null;
+
+function createDefaultState() {
+  return {
+    usersByEmail: {},
+    goalsByUser: {},
+    transactionsByUser: {},
+    counters: {
+      nextGoalId: 1,
+      nextTransactionId: 1,
+    },
+  };
+}
+
+function normalizeState(input) {
+  const safe = input && typeof input === "object" ? input : {};
+  return {
+    usersByEmail: safe.usersByEmail && typeof safe.usersByEmail === "object" ? safe.usersByEmail : {},
+    goalsByUser: safe.goalsByUser && typeof safe.goalsByUser === "object" ? safe.goalsByUser : {},
+    transactionsByUser: safe.transactionsByUser && typeof safe.transactionsByUser === "object" ? safe.transactionsByUser : {},
+    counters: {
+      nextGoalId: Number(safe.counters?.nextGoalId) > 0 ? Number(safe.counters.nextGoalId) : 1,
+      nextTransactionId: Number(safe.counters?.nextTransactionId) > 0 ? Number(safe.counters.nextTransactionId) : 1,
+    },
+  };
+}
+
+async function loadState() {
+  if (stateCache) {
+    return stateCache;
+  }
+
+  const raw = await DATA_STORE.get(DATA_KEY, { type: "json" }).catch(() => null);
+  stateCache = normalizeState(raw || createDefaultState());
+  return stateCache;
+}
+
+async function saveState(state) {
+  stateCache = state;
+  await DATA_STORE.set(DATA_KEY, JSON.stringify(state));
+}
 
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -79,17 +118,17 @@ function defaultNameFromEmail(email) {
     .replace(/\b\w/g, (char) => char.toUpperCase()) || "Dreamer";
 }
 
-function getOrCreateUser(email, name, password = "") {
+function getOrCreateUser(state, email, name, password = "") {
   const normalizedEmail = String(email || "").toLowerCase().trim();
   if (!normalizedEmail) {
     return null;
   }
 
-  const existing = usersByEmail.get(normalizedEmail);
+  const existing = state.usersByEmail[normalizedEmail];
   if (existing) {
     if (password && !existing.password) {
       existing.password = password;
-      usersByEmail.set(normalizedEmail, existing);
+      state.usersByEmail[normalizedEmail] = existing;
     }
     return existing;
   }
@@ -101,17 +140,17 @@ function getOrCreateUser(email, name, password = "") {
     password,
   };
 
-  usersByEmail.set(normalizedEmail, user);
+  state.usersByEmail[normalizedEmail] = user;
   return user;
 }
 
-function getUserByEmail(email) {
+function getUserByEmail(state, email) {
   const normalizedEmail = String(email || "").toLowerCase().trim();
   if (!normalizedEmail) {
     return null;
   }
 
-  return usersByEmail.get(normalizedEmail) || null;
+  return state.usersByEmail[normalizedEmail] || null;
 }
 
 function getEmailFromToken(token) {
@@ -126,7 +165,7 @@ function getEmailFromToken(token) {
   }
 }
 
-function getAuthUser(req) {
+function getAuthUser(state, req) {
   const authHeader = req.headers.get("authorization") || req.headers.get("Authorization");
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return null;
@@ -138,21 +177,23 @@ function getAuthUser(req) {
     return null;
   }
 
-  return getUserByEmail(email) || getOrCreateUser(email, defaultNameFromEmail(email));
+  return getUserByEmail(state, email) || getOrCreateUser(state, email, defaultNameFromEmail(email));
 }
 
-function getUserGoals(userId) {
-  if (!goalsByUser.has(userId)) {
-    goalsByUser.set(userId, []);
+function getUserGoals(state, userId) {
+  const key = String(userId);
+  if (!Array.isArray(state.goalsByUser[key])) {
+    state.goalsByUser[key] = [];
   }
-  return goalsByUser.get(userId);
+  return state.goalsByUser[key];
 }
 
-function getUserTransactions(userId) {
-  if (!transactionsByUser.has(userId)) {
-    transactionsByUser.set(userId, []);
+function getUserTransactions(state, userId) {
+  const key = String(userId);
+  if (!Array.isArray(state.transactionsByUser[key])) {
+    state.transactionsByUser[key] = [];
   }
-  return transactionsByUser.get(userId);
+  return state.transactionsByUser[key];
 }
 
 function hydrateGoal(goal) {
@@ -168,9 +209,9 @@ function hydrateGoal(goal) {
   };
 }
 
-function buildDashboard(user) {
-  const goals = getUserGoals(user.id);
-  const transactions = getUserTransactions(user.id);
+function buildDashboard(state, user) {
+  const goals = getUserGoals(state, user.id);
+  const transactions = getUserTransactions(state, user.id);
 
   const totalSaved = goals.reduce((sum, goal) => sum + toNumber(goal.saved_amount, 0), 0);
   const totalTarget = goals.reduce((sum, goal) => sum + toNumber(goal.target_amount, 0), 0);
@@ -202,8 +243,8 @@ async function parseBody(req) {
   }
 }
 
-function ensureAuth(req) {
-  const user = getAuthUser(req);
+function ensureAuth(state, req) {
+  const user = getAuthUser(state, req);
   if (!user) {
     return { error: textResponse("Not authenticated", 401) };
   }
@@ -211,6 +252,8 @@ function ensureAuth(req) {
 }
 
 export default async (req) => {
+  const state = await loadState();
+
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
@@ -235,11 +278,12 @@ export default async (req) => {
       return textResponse("Email and password are required", 400);
     }
 
-    if (getUserByEmail(email)) {
+    if (getUserByEmail(state, email)) {
       return textResponse("An account with this email already exists", 409);
     }
 
-    getOrCreateUser(email, name, password);
+    getOrCreateUser(state, email, name, password);
+    await saveState(state);
 
     return jsonResponse({
       access_token: signToken(email),
@@ -256,11 +300,12 @@ export default async (req) => {
       return textResponse("Email and password are required", 400);
     }
 
-    const user = getUserByEmail(email);
+    const user = getUserByEmail(state, email);
     if (!user) {
       // Serverless memory can reset between deployments/cold starts.
       // Auto-create on login so users are never locked out.
-      getOrCreateUser(email, defaultNameFromEmail(email), password);
+      getOrCreateUser(state, email, defaultNameFromEmail(email), password);
+      await saveState(state);
       return jsonResponse({
         access_token: signToken(email),
         token_type: "bearer",
@@ -270,7 +315,8 @@ export default async (req) => {
     if (!user.password || user.password !== password) {
       // Self-heal password drift from in-memory state resets.
       user.password = password;
-      usersByEmail.set(email, user);
+      state.usersByEmail[email] = user;
+      await saveState(state);
     }
 
     return jsonResponse({
@@ -288,31 +334,32 @@ export default async (req) => {
       return textResponse("Email and password are required", 400);
     }
 
-    const user = getUserByEmail(email);
+    const user = getUserByEmail(state, email);
     if (!user) {
       return textResponse("Account not found", 404);
     }
 
     user.password = password;
-    usersByEmail.set(email, user);
+    state.usersByEmail[email] = user;
+    await saveState(state);
     return jsonResponse({ message: "Password reset successful" });
   }
 
   if (path === "/api/v1/goals" && req.method === "GET") {
-    const auth = ensureAuth(req);
+    const auth = ensureAuth(state, req);
     if (auth.error) return auth.error;
 
-    const goals = getUserGoals(auth.user.id).map(hydrateGoal);
+    const goals = getUserGoals(state, auth.user.id).map(hydrateGoal);
     return jsonResponse(goals);
   }
 
   if (path === "/api/v1/goals" && req.method === "POST") {
-    const auth = ensureAuth(req);
+    const auth = ensureAuth(state, req);
     if (auth.error) return auth.error;
 
     const body = await parseBody(req);
     const goal = {
-      id: nextGoalId++,
+      id: state.counters.nextGoalId++,
       title: String(body.title || "Untitled Dream"),
       target_amount: toNumber(body.target_amount, 0),
       saved_amount: toNumber(body.saved_amount, 0),
@@ -328,17 +375,18 @@ export default async (req) => {
       priority: body.priority ?? null,
     };
 
-    const goals = getUserGoals(auth.user.id);
+    const goals = getUserGoals(state, auth.user.id);
     goals.push(goal);
+    await saveState(state);
     return jsonResponse(hydrateGoal(goal));
   }
 
   if (path.startsWith("/api/v1/goals/") && (req.method === "PUT" || req.method === "DELETE")) {
-    const auth = ensureAuth(req);
+    const auth = ensureAuth(state, req);
     if (auth.error) return auth.error;
 
     const id = Number(path.split("/").pop());
-    const goals = getUserGoals(auth.user.id);
+    const goals = getUserGoals(state, auth.user.id);
     const index = goals.findIndex((goal) => goal.id === id);
 
     if (index < 0) {
@@ -347,6 +395,7 @@ export default async (req) => {
 
     if (req.method === "DELETE") {
       goals.splice(index, 1);
+      await saveState(state);
       return new Response(null, { status: 204 });
     }
 
@@ -355,24 +404,25 @@ export default async (req) => {
       ...goals[index],
       ...body,
     };
+    await saveState(state);
 
     return jsonResponse(hydrateGoal(goals[index]));
   }
 
   if (path === "/api/v1/transactions" && req.method === "GET") {
-    const auth = ensureAuth(req);
+    const auth = ensureAuth(state, req);
     if (auth.error) return auth.error;
 
-    return jsonResponse(getUserTransactions(auth.user.id));
+    return jsonResponse(getUserTransactions(state, auth.user.id));
   }
 
   if (path === "/api/v1/transactions" && req.method === "POST") {
-    const auth = ensureAuth(req);
+    const auth = ensureAuth(state, req);
     if (auth.error) return auth.error;
 
     const body = await parseBody(req);
     const entry = {
-      id: nextTransactionId++,
+      id: state.counters.nextTransactionId++,
       user_id: auth.user.id,
       goal_id: body.goal_id ?? null,
       kind: String(body.kind || "expense"),
@@ -383,26 +433,28 @@ export default async (req) => {
       created_at: new Date().toISOString(),
     };
 
-    const transactions = getUserTransactions(auth.user.id);
+    const transactions = getUserTransactions(state, auth.user.id);
     transactions.unshift(entry);
 
     if (entry.goal_id) {
-      const goals = getUserGoals(auth.user.id);
+      const goals = getUserGoals(state, auth.user.id);
       const goal = goals.find((item) => item.id === entry.goal_id);
       if (goal && entry.kind === "savings") {
         goal.saved_amount = toNumber(goal.saved_amount, 0) + toNumber(entry.amount, 0);
       }
     }
 
+    await saveState(state);
+
     return jsonResponse(entry);
   }
 
   if (path.startsWith("/api/v1/transactions/") && (req.method === "PUT" || req.method === "DELETE")) {
-    const auth = ensureAuth(req);
+    const auth = ensureAuth(state, req);
     if (auth.error) return auth.error;
 
     const id = Number(path.split("/").pop());
-    const transactions = getUserTransactions(auth.user.id);
+    const transactions = getUserTransactions(state, auth.user.id);
     const index = transactions.findIndex((entry) => entry.id === id);
 
     if (index < 0) {
@@ -411,6 +463,7 @@ export default async (req) => {
 
     if (req.method === "DELETE") {
       transactions.splice(index, 1);
+      await saveState(state);
       return new Response(null, { status: 204 });
     }
 
@@ -420,15 +473,16 @@ export default async (req) => {
       ...body,
       amount: body.amount === undefined ? transactions[index].amount : toNumber(body.amount, 0),
     };
+    await saveState(state);
 
     return jsonResponse(transactions[index]);
   }
 
   if (path === "/api/v1/transactions/summary" && req.method === "GET") {
-    const auth = ensureAuth(req);
+    const auth = ensureAuth(state, req);
     if (auth.error) return auth.error;
 
-    const transactions = getUserTransactions(auth.user.id);
+    const transactions = getUserTransactions(state, auth.user.id);
 
     const totals = {
       income: 0,
@@ -470,10 +524,10 @@ export default async (req) => {
   }
 
   if ((path === "/api/v1/dashboard" || path === "/api/v1/dashboard/") && req.method === "GET") {
-    const auth = ensureAuth(req);
+    const auth = ensureAuth(state, req);
     if (auth.error) return auth.error;
 
-    return jsonResponse(buildDashboard(auth.user));
+    return jsonResponse(buildDashboard(state, auth.user));
   }
 
   if (path === "/health" && req.method === "GET") {

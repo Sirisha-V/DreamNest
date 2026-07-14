@@ -73,6 +73,11 @@ interface LocalDreamCache {
   coachState: CoachState;
 }
 
+interface LocalCacheReadResult {
+  cache: LocalDreamCache;
+  sourceKey: string;
+}
+
 interface MissionRewardResult {
   awardedCoins: number;
   bonusCoins: number;
@@ -270,21 +275,21 @@ const normalizeCoachState = (input: Partial<CoachState> | null | undefined): Coa
   };
 };
 
-const readLocalCache = (): LocalDreamCache | null => {
-  const primaryKey = getCacheKey();
-  const candidates = [primaryKey];
-
+const readCacheByKeys = (candidates: string[]): LocalCacheReadResult | null => {
   for (const key of candidates) {
     try {
       const raw = localStorage.getItem(key);
       if (!raw) continue;
       const parsed = JSON.parse(raw) as Partial<LocalDreamCache>;
       return {
-        goals: Array.isArray(parsed.goals) ? parsed.goals : [],
-        transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
-        dashboardStats: parsed.dashboardStats ?? defaultDashboard(),
-        savingsHistory: Array.isArray(parsed.savingsHistory) ? parsed.savingsHistory : [],
-        coachState: normalizeCoachState(parsed.coachState),
+        sourceKey: key,
+        cache: {
+          goals: Array.isArray(parsed.goals) ? parsed.goals : [],
+          transactions: Array.isArray(parsed.transactions) ? parsed.transactions : [],
+          dashboardStats: parsed.dashboardStats ?? defaultDashboard(),
+          savingsHistory: Array.isArray(parsed.savingsHistory) ? parsed.savingsHistory : [],
+          coachState: normalizeCoachState(parsed.coachState),
+        },
       };
     } catch {
       continue;
@@ -292,6 +297,22 @@ const readLocalCache = (): LocalDreamCache | null => {
   }
 
   return null;
+};
+
+const readLocalCache = (): LocalDreamCache | null => {
+  const primaryKey = getCacheKey();
+  const result = readCacheByKeys([primaryKey]);
+  return result?.cache ?? null;
+};
+
+const readFallbackCache = (): LocalDreamCache | null => {
+  const primaryKey = getCacheKey();
+  if (primaryKey === FALLBACK_CACHE_KEY) {
+    return null;
+  }
+
+  const result = readCacheByKeys([FALLBACK_CACHE_KEY]);
+  return result?.cache ?? null;
 };
 
 const writeLocalCache = (cache: LocalDreamCache) => {
@@ -474,6 +495,41 @@ export const DreamProvider = ({ children }: { children: React.ReactNode }) => {
 
   const clearStoredAppData = useCallback(() => {
     clearAppData();
+  }, []);
+
+  const hydrateBackendFromLocalCache = useCallback(async (cache: LocalDreamCache) => {
+    const goalIdMap = new Map<number, number>();
+
+    for (const goal of [...cache.goals].reverse()) {
+      const created = await createGoal({
+        title: goal.title,
+        target_amount: goal.target_amount,
+        saved_amount: goal.saved_amount,
+        monthly_contribution: goal.monthly_contribution,
+        months_saved: goal.months_saved,
+        monthly_income: goal.monthly_income,
+        mandatory_expenses: goal.mandatory_expenses,
+        is_couple_goal: goal.is_couple_goal,
+        partner_name: goal.partner_name,
+        plan_summary: goal.plan_summary,
+        notes: goal.notes,
+        deadline: goal.deadline,
+        priority: goal.priority,
+      });
+      goalIdMap.set(goal.id, created.id);
+    }
+
+    for (const entry of [...cache.transactions].reverse()) {
+      const mappedGoalId = entry.goal_id === null ? null : goalIdMap.get(entry.goal_id) ?? null;
+      await createTransaction({
+        kind: entry.kind,
+        category: entry.category,
+        amount: entry.amount,
+        goal_id: mappedGoalId,
+        note: entry.note,
+        occurred_on: entry.occurred_on,
+      });
+    }
   }, []);
 
   const recalculateDashboard = useCallback((nextGoals: Goal[], nextTransactions: Transaction[]) => computeDashboard(dashboardUser, nextGoals, nextTransactions), [dashboardUser]);
@@ -970,16 +1026,36 @@ export const DreamProvider = ({ children }: { children: React.ReactNode }) => {
       ]);
 
       const localCache = loadFromStorage();
+      const fallbackCache = readFallbackCache();
       const backendLooksEmpty = goalsData.length === 0 && transactionsData.length === 0;
       const hasLocalData = Boolean(localCache && (localCache.goals.length > 0 || localCache.transactions.length > 0));
+      const hasFallbackData = Boolean(fallbackCache && (fallbackCache.goals.length > 0 || fallbackCache.transactions.length > 0));
 
-      if (backendLooksEmpty && hasLocalData && localCache) {
-        setDashboardUser(localCache.dashboardStats.user || 'Dreamer');
-        setGoals(localCache.goals);
-        setTransactions(localCache.transactions);
-        setSavingsHistory(localCache.savingsHistory.length > 0 ? localCache.savingsHistory : buildSavingsHistory(localCache.goals, localCache.transactions));
-        setCoachState(normalizeCoachState(localCache.coachState));
-        return;
+      if (backendLooksEmpty && (hasLocalData || hasFallbackData)) {
+        const sourceCache = hasLocalData ? localCache : fallbackCache;
+        if (sourceCache) {
+          try {
+            await hydrateBackendFromLocalCache(sourceCache);
+            const [rehydratedDashboard, rehydratedGoals, rehydratedTransactions] = await Promise.all([
+              fetchDashboard().catch(() => null),
+              fetchGoals(),
+              fetchTransactions(),
+            ]);
+
+            setDashboardUser(rehydratedDashboard?.user || sourceCache.dashboardStats.user || 'Dreamer');
+            applySnapshot(rehydratedGoals, rehydratedTransactions);
+            return;
+          } catch {
+            // Fall through to local cache so user data remains visible while backend sync retries.
+            setDashboardUser(sourceCache.dashboardStats.user || 'Dreamer');
+            setGoals(sourceCache.goals);
+            setTransactions(sourceCache.transactions);
+            setSavingsHistory(sourceCache.savingsHistory.length > 0 ? sourceCache.savingsHistory : buildSavingsHistory(sourceCache.goals, sourceCache.transactions));
+            setCoachState(normalizeCoachState(sourceCache.coachState));
+            setError('Using your saved local data while account sync retries.');
+            return;
+          }
+        }
       }
 
       setDashboardUser(dashboardData?.user || 'Dreamer');
@@ -999,7 +1075,7 @@ export const DreamProvider = ({ children }: { children: React.ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  }, [applySnapshot, loadFromStorage]);
+  }, [applySnapshot, hydrateBackendFromLocalCache, loadFromStorage]);
 
   useEffect(() => {
     if (!localStorage.getItem('dreamnest_token')) {

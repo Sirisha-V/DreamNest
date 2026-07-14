@@ -132,7 +132,7 @@ const OnboardingExperience = () => {
               <span key={index} className="onboarding-spark" />
             ))}
           </div>
-          <p className="onboarding-pill">Premium Welcome</p>
+          <p className="onboarding-pill">Welcome</p>
           <h2>{`🎉 Happy Birthday ${onboardingName} ❤️`}</h2>
           <p>I've been waiting for you to open this.</p>
         </div>

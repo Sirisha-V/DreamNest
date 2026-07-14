@@ -11,8 +11,14 @@ const TimelinePage = () => {
 
   const goal = useMemo(() => goals.find((item) => item.id === Number(goalId)), [goals, goalId]);
 
-  const estimatedMonths = goal ? (goal.monthly_contribution > 0 ? Math.max(0, Math.ceil((goal.target_amount - goal.saved_amount) / goal.monthly_contribution)) : 0) : 0;
-  const estimatedCompletion = goal?.deadline ?? (estimatedMonths > 0 ? `${estimatedMonths} months` : 'TBD');
+  const estimatedMonths = goal
+    ? goal.monthly_contribution > 0
+      ? Math.ceil(Math.max(0, goal.target_amount - goal.saved_amount) / goal.monthly_contribution)
+      : null
+    : null;
+  const estimatedCompletion = estimatedMonths !== null
+    ? new Date(new Date().setMonth(new Date().getMonth() + estimatedMonths)).toISOString().slice(0, 10)
+    : goal?.deadline ?? 'TBD';
 
   if (loading) {
     return <div className="page-panel">Loading timeline…</div>;
@@ -88,8 +94,8 @@ const TimelinePage = () => {
         <div className="metric-card">
           <div>
             <p className="metric-label">Remaining Months</p>
-            <p className="metric-value">{estimatedMonths}</p>
-            <p className="metric-detail">Estimated from monthly contribution.</p>
+            <p className="metric-value">{estimatedMonths ?? 'TBD'}</p>
+            <p className="metric-detail">Calculated from target amount, saved amount, and monthly contribution.</p>
           </div>
           <div className="icon-box"><Clock3 size={18} /></div>
         </div>
@@ -103,6 +109,9 @@ const TimelinePage = () => {
           progress={goal.progress}
           milestones={milestones}
           monthsSaved={goal.months_saved || 0}
+          targetAmount={goal.target_amount}
+          savedAmount={goal.saved_amount}
+          monthlyContribution={goal.monthly_contribution}
         />
         <div className="timeline-detail-grid">
           {milestones.map((milestone, index) => (

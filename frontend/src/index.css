@@ -3303,7 +3303,8 @@ a { text-decoration: none; }
   z-index: 120;
   display: grid;
   place-items: center;
-  padding: 20px;
+  padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  overflow-y: auto;
 }
 
 .onboarding-bg {
@@ -3337,6 +3338,8 @@ a { text-decoration: none; }
 .onboarding-letter-modal,
 .onboarding-wizard {
   padding: 26px;
+  max-height: min(88vh, 860px);
+  overflow-y: auto;
 }
 
 .onboarding-pill {
@@ -3510,11 +3513,21 @@ a { text-decoration: none; }
 }
 
 @media (max-width: 720px) {
+  .onboarding-overlay {
+    align-items: start;
+  }
+
   .onboarding-celebration,
   .onboarding-letter-modal,
   .onboarding-wizard {
     width: min(94vw, 760px);
     padding: 20px;
+  }
+
+  .onboarding-letter-modal,
+  .onboarding-wizard {
+    max-height: calc(100vh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    padding-bottom: calc(20px + env(safe-area-inset-bottom));
   }
 
   .onboarding-actions {

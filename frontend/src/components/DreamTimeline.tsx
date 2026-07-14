@@ -7,10 +7,29 @@ interface DreamTimelineProps {
   progress: number;
   milestones: Array<{ label: string; completed: boolean }>;
   monthsSaved: number;
+  targetAmount?: number;
+  savedAmount?: number;
+  monthlyContribution?: number;
 }
 
-const DreamTimeline = ({ title, createdAt, deadline, progress, milestones, monthsSaved }: DreamTimelineProps) => {
-  const estimatedMonths = deadline ? Math.max(0, Math.ceil((new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30))) : 0;
+const DreamTimeline = ({
+  title,
+  createdAt,
+  deadline,
+  progress,
+  milestones,
+  monthsSaved,
+  targetAmount,
+  savedAmount,
+  monthlyContribution,
+}: DreamTimelineProps) => {
+  const remainingAmount = Math.max(0, (targetAmount ?? 0) - (savedAmount ?? 0));
+  const estimatedMonths = monthlyContribution && monthlyContribution > 0
+    ? Math.ceil(remainingAmount / monthlyContribution)
+    : null;
+  const projectedCompletion = estimatedMonths !== null
+    ? new Date(new Date().setMonth(new Date().getMonth() + estimatedMonths)).toISOString().slice(0, 10)
+    : deadline;
   return (
     <div className="page-panel timeline-panel">
       <div className="panel-actions">
@@ -38,7 +57,7 @@ const DreamTimeline = ({ title, createdAt, deadline, progress, milestones, month
           <span className="timeline-dot" />
           <div>
             <p className="setting-title">Estimated completion</p>
-            <p className="setting-detail">{deadline ?? 'TBD'}</p>
+            <p className="setting-detail">{projectedCompletion ?? 'TBD'}</p>
           </div>
         </div>
         <div className="timeline-step">
@@ -52,7 +71,7 @@ const DreamTimeline = ({ title, createdAt, deadline, progress, milestones, month
           <span className="timeline-dot" />
           <div>
             <p className="setting-title">Remaining months</p>
-            <p className="setting-detail">{estimatedMonths} months</p>
+            <p className="setting-detail">{estimatedMonths !== null ? `${estimatedMonths} months` : 'TBD'}</p>
           </div>
         </div>
         <div className="timeline-step">

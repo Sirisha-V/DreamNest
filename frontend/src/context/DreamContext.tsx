@@ -772,11 +772,15 @@ export const DreamProvider = ({ children }: { children: React.ReactNode }) => {
   }, [applySnapshot, goals, savingsHistory, transactions]);
 
   const removeTransaction = useCallback(async (transactionId: number) => {
+    const previousTransactions = transactions;
+    const optimisticTransactions = previousTransactions.filter((item) => item.id !== transactionId);
+    const optimisticHistory = buildSavingsHistory(goals, optimisticTransactions, savingsHistory);
+
+    // Optimistically remove the item so UI stays responsive.
+    applySnapshot(goals, optimisticTransactions, optimisticHistory);
+
     try {
       await withTimeout(deleteTransaction(transactionId), 4500);
-      const nextTransactions = transactions.filter((item) => item.id !== transactionId);
-      const nextHistory = buildSavingsHistory(goals, nextTransactions, savingsHistory);
-      applySnapshot(goals, nextTransactions, nextHistory);
       return;
     } catch (err) {
       // Reconcile against backend state to avoid false-negative delete failures.
@@ -791,6 +795,10 @@ export const DreamProvider = ({ children }: { children: React.ReactNode }) => {
       } catch {
         // If reconciliation also fails, surface the original error.
       }
+
+      // Roll back optimistic deletion when backend confirms item still exists.
+      const rollbackHistory = buildSavingsHistory(goals, previousTransactions, savingsHistory);
+      applySnapshot(goals, previousTransactions, rollbackHistory);
 
       throw err;
     }

@@ -22,22 +22,7 @@ import type { Transaction } from '../lib/api';
 
 const formatCurrency = (value: number) => `₹${value.toLocaleString('en-IN')}`;
 
-type BudgetCategoryId = 'food' | 'shopping' | 'bills' | 'travel' | 'entertainment';
-
 type SortMode = 'latest' | 'oldest' | 'amount-high' | 'amount-low';
-
-const budgetConfig: Array<{
-  id: BudgetCategoryId;
-  title: string;
-  keywords: string[];
-  ratio: number;
-}> = [
-  { id: 'food', title: 'Food', keywords: ['food', 'grocery', 'groceries', 'dining', 'restaurant', 'swiggy', 'zomato'], ratio: 0.28 },
-  { id: 'shopping', title: 'Shopping', keywords: ['shopping', 'amazon', 'flipkart', 'fashion', 'clothes'], ratio: 0.16 },
-  { id: 'bills', title: 'Bills', keywords: ['bill', 'rent', 'emi', 'electricity', 'internet', 'utility', 'utilities'], ratio: 0.24 },
-  { id: 'travel', title: 'Travel', keywords: ['travel', 'fuel', 'petrol', 'uber', 'ola', 'bus', 'train', 'flight'], ratio: 0.16 },
-  { id: 'entertainment', title: 'Entertainment', keywords: ['movie', 'entertainment', 'subscription', 'netflix', 'spotify', 'games'], ratio: 0.16 },
-];
 
 const txLabel = (kind: Transaction['kind']) => {
   switch (kind) {
@@ -85,7 +70,6 @@ const MonthlySavingsPage = () => {
   const [transferOpen, setTransferOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [budgetOpen, setBudgetOpen] = useState(false);
 
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Salary');
@@ -99,10 +83,6 @@ const MonthlySavingsPage = () => {
   const [editNote, setEditNote] = useState('');
   const [editGoalId, setEditGoalId] = useState<number | ''>('');
   const [editOccurredOn, setEditOccurredOn] = useState('');
-
-  const [budgetCategory, setBudgetCategory] = useState<BudgetCategoryId>('food');
-  const [budgetAmount, setBudgetAmount] = useState('');
-  const [customBudgets, setCustomBudgets] = useState<Partial<Record<BudgetCategoryId, number>>>({});
 
   const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState('');
@@ -186,33 +166,6 @@ const MonthlySavingsPage = () => {
     { label: 'Savings', value: summary.savings, tone: 'var(--money-savings)' },
   ];
   const chartPeak = Math.max(1, ...chartItems.map((item) => item.value));
-
-  const budgets = useMemo(() => {
-    const expenseTx = transactions.filter((item) => item.kind === 'expense');
-
-    return budgetConfig.map((config) => {
-      const spent = expenseTx
-        .filter((item) => config.keywords.some((keyword) => item.category.toLowerCase().includes(keyword)))
-        .reduce((sum, item) => sum + item.amount, 0);
-
-      const inferredBudget = Math.max(
-        1000,
-        Math.round(Math.max(spent, summary.expenses * config.ratio) / 100) * 100,
-      );
-
-      const budget = customBudgets[config.id] ?? inferredBudget;
-      const remaining = Math.max(0, budget - spent);
-      const progress = budget > 0 ? Math.min(100, (spent / budget) * 100) : 0;
-
-      return {
-        ...config,
-        budget,
-        spent,
-        remaining,
-        progress,
-      };
-    });
-  }, [customBudgets, summary.expenses, transactions]);
 
   const biggestDream = useMemo(() => {
     if (goals.length === 0) return null;
@@ -344,22 +297,6 @@ const MonthlySavingsPage = () => {
     const firstGoalId = goals[0]?.id;
     setGoalId(firstGoalId ?? '');
     setTransferOpen(true);
-  };
-
-  const handleCreateBudget = () => {
-    const value = Number(budgetAmount);
-    if (!value || value <= 0) {
-      setToast('Enter a valid budget amount.');
-      return;
-    }
-
-    setCustomBudgets((current) => ({
-      ...current,
-      [budgetCategory]: value,
-    }));
-    setBudgetOpen(false);
-    setBudgetAmount('');
-    setToast('Budget saved');
   };
 
   const openEdit = (transaction: Transaction) => {
@@ -557,29 +494,6 @@ const MonthlySavingsPage = () => {
       <section className="page-panel">
         <div className="panel-actions">
           <div>
-            <h3 className="setting-title">Budgets</h3>
-            <p className="setting-detail">Food, shopping, bills, travel, and entertainment overview.</p>
-          </div>
-          <button type="button" className="button button-ghost" onClick={() => setBudgetOpen(true)}>Create Budget</button>
-        </div>
-        <div className="savings-budget-grid">
-          {budgets.map((budget) => (
-            <article key={budget.id} className="setting-card money-budget-card">
-              <p className="setting-title">{budget.title}</p>
-              <p className="setting-detail">Budget: {formatCurrency(budget.budget)}</p>
-              <p className="setting-detail">Spent: {formatCurrency(budget.spent)}</p>
-              <p className="setting-detail">Remaining: {formatCurrency(budget.remaining)}</p>
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: `${budget.progress}%` }} />
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="page-panel">
-        <div className="panel-actions">
-          <div>
             <h3 className="setting-title">Recent Transactions</h3>
             <p className="setting-detail">Latest 10 entries with search, filter, and sort.</p>
           </div>
@@ -665,7 +579,6 @@ const MonthlySavingsPage = () => {
           <button type="button" className="button button-primary" onClick={() => setIncomeOpen(true)}><PlusCircle size={16} /> Add Income</button>
           <button type="button" className="button button-secondary" onClick={() => setExpenseOpen(true)}><ArrowDownRight size={16} /> Add Expense</button>
           <button type="button" className="button button-primary" onClick={handleAddSavings}><PiggyBank size={16} /> Add Savings</button>
-          <button type="button" className="button button-ghost" onClick={() => setBudgetOpen(true)}><PlusCircle size={16} /> Create Budget</button>
           <button type="button" className="button button-secondary" onClick={handleTransferToDream}><TrendingUp size={16} /> Transfer to Dream</button>
         </div>
       </section>
@@ -762,27 +675,10 @@ const MonthlySavingsPage = () => {
         </div>
       </Modal>
 
-      <Modal open={budgetOpen} title="Create Budget" onClose={() => setBudgetOpen(false)}>
-        <div className="space-y-4">
-          <label className="form-field">
-            <span>Category</span>
-            <select className="input-field" value={budgetCategory} onChange={(event) => setBudgetCategory(event.target.value as BudgetCategoryId)}>
-              {budgetConfig.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
-            </select>
-          </label>
-          <label className="form-field">
-            <span>Budget Amount</span>
-            <input className="input-field" type="number" min="1" value={budgetAmount} onChange={(event) => setBudgetAmount(event.target.value)} placeholder="₹8,000" />
-          </label>
-          <button type="button" className="button button-primary w-full" onClick={handleCreateBudget}>Save Budget</button>
-        </div>
-      </Modal>
-
       <div className="savings-mobile-sticky" role="group" aria-label="Quick Money Actions">
         <button type="button" className="button button-primary" onClick={() => setIncomeOpen(true)}><PlusCircle size={14} /> Add Income</button>
         <button type="button" className="button button-secondary" onClick={() => setExpenseOpen(true)}><ArrowDownRight size={14} /> Add Expense</button>
         <button type="button" className="button button-primary" onClick={handleAddSavings}><PiggyBank size={14} /> Add Savings</button>
-        <button type="button" className="button button-ghost" onClick={() => setBudgetOpen(true)}><PlusCircle size={14} /> Create Budget</button>
         <button type="button" className="button button-secondary" onClick={handleTransferToDream}><TrendingUp size={14} /> Transfer to Dream</button>
       </div>
 

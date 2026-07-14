@@ -1,24 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Coins, Sparkles } from 'lucide-react';
+import { Coins } from 'lucide-react';
 import { useDreams } from '../context/DreamContext';
 
 const formatCurrency = (value: number) => `₹${value.toLocaleString('en-IN')}`;
-
-const getMotivationMessage = (progress: number) => {
-  if (progress >= 100) {
-    return `You did it Nana!!\nI'm so proud of you.\n\nLove,\nSiri Papa ❤️`;
-  }
-  if (progress >= 75) {
-    return 'The finish line is close.';
-  }
-  if (progress >= 50) {
-    return "We're over halfway there ❤️";
-  }
-  if (progress >= 25) {
-    return "You're making incredible progress.";
-  }
-  return 'Every big dream begins\nwith one small step.';
-};
 
 const toMonthLabel = (monthsAhead: number) => {
   const target = new Date();
@@ -118,7 +102,6 @@ const AnalyticsPage = () => {
       forecastFast: toMonthLabel(forecastFastMonths),
       finishEarlier: Math.max(0, forecastSlowMonths - forecastFastMonths),
       badges,
-      motivation: getMotivationMessage(overallCompletion),
       weekly: {
         dreamsCreated: dreamsCreatedThisWeek,
         moneySaved: moneySavedThisWeek,
@@ -251,14 +234,6 @@ const AnalyticsPage = () => {
             <p><strong>Current streak:</strong> 🔥 {currentStreak} days</p>
           </div>
         </div>
-      </section>
-
-      <section className="page-panel coach-motivation">
-        <div className="panel-actions">
-          <Sparkles size={18} />
-          <h3 className="setting-title">AI Motivation</h3>
-        </div>
-        <p className="coach-motivation-copy">{analytics.motivation}</p>
       </section>
 
       <section className="page-panel">

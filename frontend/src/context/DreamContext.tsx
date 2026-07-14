@@ -513,8 +513,26 @@ export const DreamProvider = ({ children }: { children: React.ReactNode }) => {
   }, [recalculateDashboard, saveToStorage, savingsHistory]);
 
   const mergeTransaction = useCallback((entry: Transaction, current: Transaction[]) => {
-    if (current.some((item) => item.id === entry.id)) {
-      return current;
+    const existingById = current.find((item) => item.id === entry.id);
+    if (existingById) {
+      const sameEntry =
+        existingById.kind === entry.kind &&
+        existingById.category === entry.category &&
+        existingById.amount === entry.amount &&
+        existingById.goal_id === entry.goal_id &&
+        existingById.occurred_on === entry.occurred_on &&
+        (existingById.note ?? null) === (entry.note ?? null);
+
+      if (sameEntry) {
+        return current;
+      }
+
+      // Netlify function memory can reset IDs; preserve the new entry locally with a synthetic ID.
+      const collisionSafeEntry: Transaction = {
+        ...entry,
+        id: -Math.floor(Date.now() + Math.random() * 1000),
+      };
+      return [collisionSafeEntry, ...current];
     }
     return [entry, ...current];
   }, []);

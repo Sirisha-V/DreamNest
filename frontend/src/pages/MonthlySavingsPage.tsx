@@ -252,6 +252,7 @@ const MonthlySavingsPage = () => {
   }, [filterKind, query, sortMode, transactions]);
 
   const recentTransactions = sortedFilteredTransactions.slice(0, 10);
+  const hasOpenModal = incomeOpen || expenseOpen || transferOpen || historyOpen || editOpen;
 
   const toggleSection = (key: 'income' | 'expense' | 'savings' | 'investment') => {
     setExpandedSections((current) => ({
@@ -675,12 +676,18 @@ const MonthlySavingsPage = () => {
       </Modal>
 
       <Modal open={expenseOpen} title="Add Expense" onClose={() => setExpenseOpen(false)}>
-        <div className="space-y-4">
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleSubmit('expense');
+          }}
+        >
           <label className="form-field"><span>Amount</span><input className="input-field" type="number" min="1" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="₹3,200" /></label>
           <label className="form-field"><span>Category</span><input className="input-field" value={category} onChange={(event) => setCategory(event.target.value)} placeholder="Groceries" /></label>
           <label className="form-field"><span>Note</span><textarea className="input-field" rows={3} value={note} onChange={(event) => setNote(event.target.value)} placeholder="Food budget, bills, travel" /></label>
-          <button type="button" className="button button-primary w-full" disabled={saving} onClick={() => void handleSubmit('expense')}>{saving ? 'Saving…' : 'Save Expense'}</button>
-        </div>
+          <button type="submit" className="button button-primary w-full" disabled={saving}>{saving ? 'Saving…' : 'Save Expense'}</button>
+        </form>
       </Modal>
 
       <Modal open={transferOpen} title="Transfer to Dream" onClose={() => setTransferOpen(false)}>
@@ -692,12 +699,14 @@ const MonthlySavingsPage = () => {
         </div>
       </Modal>
 
-      <div className="savings-mobile-sticky" role="group" aria-label="Quick Money Actions">
-        <button type="button" className="button button-primary" onClick={() => setIncomeOpen(true)}><PlusCircle size={14} /> Add Income</button>
-        <button type="button" className="button button-secondary" onClick={() => setExpenseOpen(true)}><ArrowDownRight size={14} /> Add Expense</button>
-        <button type="button" className="button button-primary" onClick={handleAddSavings}><PiggyBank size={14} /> Add Savings</button>
-        <button type="button" className="button button-secondary" onClick={handleTransferToDream}><TrendingUp size={14} /> Transfer to Dream</button>
-      </div>
+      {!hasOpenModal ? (
+        <div className="savings-mobile-sticky" role="group" aria-label="Quick Money Actions">
+          <button type="button" className="button button-primary" onClick={() => setIncomeOpen(true)}><PlusCircle size={14} /> Add Income</button>
+          <button type="button" className="button button-secondary" onClick={() => setExpenseOpen(true)}><ArrowDownRight size={14} /> Add Expense</button>
+          <button type="button" className="button button-primary" onClick={handleAddSavings}><PiggyBank size={14} /> Add Savings</button>
+          <button type="button" className="button button-secondary" onClick={handleTransferToDream}><TrendingUp size={14} /> Transfer to Dream</button>
+        </div>
+      ) : null}
 
       <Modal open={historyOpen} title="Transaction History" onClose={() => setHistoryOpen(false)}>
         <div className="space-y-3">

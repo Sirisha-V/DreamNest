@@ -49,7 +49,6 @@ const Layout = () => {
             <div className="brand-logo">D</div>
             <div>
               <p className="brand-title">DreamNest</p>
-              <p className="brand-subtitle">AI financial planning</p>
             </div>
           </div>
           <nav className="nav-list">
